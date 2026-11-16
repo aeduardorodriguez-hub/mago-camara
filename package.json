@@ -1,0 +1,10 @@
+{
+  "name": "calendario-mental",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Calendario mental: emisor (buscador), receptor y reloj conectados por WebSocket",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node test/run.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
+}
