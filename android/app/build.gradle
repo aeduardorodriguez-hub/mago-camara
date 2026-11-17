@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.mago.calendario'
+    compileSdk 34
+    defaultConfig { applicationId 'com.mago.calendario'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }
+    buildTypes { release { minifyEnabled false } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    sourceSets { main { assets.srcDirs = ['build/web'] } }
+}
+// Copia el receptor (carpeta neocities/) a los assets y le inyecta el puente nativo.
+tasks.register('prepWeb') {
+    doLast {
+        def out = file('build/web'); out.deleteDir(); out.mkdirs()
+        copy { from '../../neocities'; into out; include 'r.html', 'receiver.js', 'shared.js', 'manifest.json', 'icon-*.png' }
+        copy { from 'android.js'; into out }
+        def h = new File(out, 'r.html'); h.text = h.text.replace('<script src="shared.js">', '<script src="android.js"></script>\n<script src="shared.js">')
+    }
+}
+preBuild.dependsOn 'prepWeb'

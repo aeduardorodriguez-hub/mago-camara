@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
+<title>Receptor</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#000;color:#e8e8e8;font-family:system-ui,Roboto,Arial,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+#start{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:center;justify-content:center;font-size:20px;color:#888}
+#top{height:52px;display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid #1c1c1c;font-size:13px;color:#777}
+#dot{width:10px;height:10px;border-radius:50%;background:#a33}#dot.on{background:#2a5}
+#top .sp{flex:1}#top button{background:#161616;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;padding:8px 12px;font-size:14px}
+#main{height:calc(100% - 52px);display:flex;flex-direction:column}
+#card{padding:18px 16px 10px;text-align:center;min-height:210px}
+#who{font-size:16px;color:#888;height:22px}
+#code{font-size:min(38vw,190px);font-weight:700;line-height:1;margin:6px 0;color:#fff}
+#sub{font-size:20px;color:#9a9a9a;height:26px}#sub b{color:#f5b942;margin-left:10px;font-weight:600}
+body.dim #code,body.dim #sub,body.dim #who{opacity:.12}
+#board{flex:1;overflow:auto;padding:0 12px;border-top:1px solid #151515}
+.row{display:flex;align-items:center;gap:10px;padding:11px 6px;border-bottom:1px solid #151515;font-size:17px}
+.row .s{width:90px;color:#777;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row .y{flex:1;color:#bbb}.row .c{font-size:24px;font-weight:700;color:#fff;min-width:44px;text-align:right}.row .b{color:#f5b942;font-size:12px;width:16px}
+.row.new{background:#14213a}
+#pad{border-top:1px solid #1c1c1c;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#080808}
+#digits{display:flex;justify-content:center;gap:8px;margin-bottom:8px}
+#digits i{font-style:normal;width:46px;height:56px;border:1px solid #2a2a2a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#ccc}
+#digits i.cur{border-color:#4a8cff;color:#fff}
+#keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+#keys button{background:#141414;border:1px solid #262626;color:#ddd;border-radius:10px;height:46px;font-size:20px}
+#keys button:active{background:#222}
+#panel{position:fixed;inset:52px 0 0 0;background:#0b0b0b;z-index:20;padding:14px;overflow:auto;display:none}
+#panel.open{display:block}
+#panel h3{margin:18px 0 6px;font-size:13px;color:#777;text-transform:uppercase;letter-spacing:.08em}
+.t{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #181818;font-size:16px}
+.t input{width:44px;height:26px}
+.map{display:flex;flex-wrap:wrap;gap:6px}.map button{background:#161616;border:1px solid #2a2a2a;color:#ccc;border-radius:8px;padding:8px 10px}.map button.learn{border-color:#4a8cff}
+small{color:#666;display:block;margin:6px 0 0;line-height:1.35}
+#gest{position:fixed;left:0;right:0;top:52px;bottom:0;z-index:15;display:none;background:#000;touch-action:none}
+#gest.on{display:block}#gest u{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-decoration:none;color:#222;font-size:12px}
+#mic{position:fixed;right:10px;bottom:10px;z-index:16;font-size:11px;color:#333;display:none}
+</style>
+</head>
+<body>
+<div id="start">Toca para iniciar</div>
+<div id="top"><span id="dot"></span><span id="pres">–</span><span class="sp"></span><button id="menu">Modos</button></div>
+<div id="main">
+  <div id="card"><div id="who"></div><div id="code">·</div><div id="sub"></div></div>
+  <div id="board"></div>
+  <div id="pad"><div id="digits"></div>
+    <div id="keys"></div></div>
+</div>
+<div id="panel">
+  <h3>Recepción (activar los que quieras)</h3>
+  <label class="t">Web · emisor del espectador<input type="checkbox" data-k="web"></label>
+  <label class="t">Voz · reconoce el año que se dice<input type="checkbox" data-k="voice"></label>
+  <label class="t">Mando / teclado (8BitDo Zero2)<input type="checkbox" data-k="pad"></label>
+  <label class="t">Gestos · toques en pantalla negra<input type="checkbox" data-k="gest"></label>
+  <h3>Salida</h3>
+  <label class="t">Voz (auriculares)<input type="checkbox" data-k="speak"></label>
+  <label class="t">Decir número de persona<input type="checkbox" data-k="seat"></label>
+  <label class="t">Notificar al reloj (app ntfy, tema …-w)<input type="checkbox" data-k="watch"></label>
+  <label class="t">Vibración<input type="checkbox" data-k="vib"></label>
+  <label class="t">Pantalla discreta (muy tenue)<input type="checkbox" data-k="dim"></label>
+  <label class="t">Teclado en pantalla<input type="checkbox" data-k="keys"></label>
+  <h3>Mando: asignar botones</h3>
+  <div class="map" id="map"></div>
+  <small>Toca una acción y pulsa el botón del mando (modo teclado). ↑/↓ cambian el dígito, → avanza (al final envía), ← retrocede, OK envía. También sirven los números del teclado. Si el mando está en modo gamepad, funciona la cruceta + A (OK) + B (borrar).</small>
+  <h3>Gestos</h3>
+  <small>Con "Gestos" activo la pantalla queda negra. Cada dígito: toca N veces y espera un instante (1–9). Dos dedos a la vez = 0. Cuatro dígitos = año enviado.</small>
+  <h3>Sala</h3>
+  <small id="keyshow"></small>
+  <div class="map"><button id="clear">Borrar historial</button><button id="link">Enlace espectador</button><button id="site">Sitio</button><button id="newkey">Clave nueva</button><button id="testbtn">Probar salida</button></div>
+</div>
+<div id="gest"><u>gestos activos</u></div>
+<script src="shared.js"></script>
+<script src="receiver.js"></script>
+</body>
+</html>

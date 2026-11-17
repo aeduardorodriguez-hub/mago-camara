@@ -1,0 +1,41 @@
+:root{--b:#dadce0;--t:#202124;--g:#5f6368;--l:#1a0dab}
+*{box-sizing:border-box}
+html,body{margin:0;background:#fff;color:var(--t);font-family:Arial,Roboto,"Helvetica Neue",sans-serif;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.view{min-height:100vh;min-height:100dvh}
+.home-top{display:flex;justify-content:flex-end;gap:18px;padding:14px 18px;font-size:13px;color:var(--t)}
+.home-top a{cursor:pointer}.apps{letter-spacing:-2px}
+.home-mid{display:flex;flex-direction:column;align-items:center;padding:14vh 16px 0}
+.brand{margin:0 0 26px;font-size:clamp(56px,16vw,92px);font-weight:500;letter-spacing:-3px;line-height:1}
+.brand.sm{font-size:26px;margin:0 14px 0 0;letter-spacing:-1px}
+.brand span:nth-child(5n+1){color:#4285f4}.brand span:nth-child(5n+2){color:#ea4335}.brand span:nth-child(5n+3){color:#fbbc05}.brand span:nth-child(5n+4){color:#34a853}.brand span:nth-child(5n){color:#ea4335}
+.sbox{position:relative;display:flex;align-items:center;width:100%;max-width:584px;height:46px;border:1px solid var(--b);border-radius:24px;padding:0 14px;background:#fff}
+.sbox:focus-within{box-shadow:0 1px 6px rgba(32,33,36,.28);border-color:transparent}
+.sbox.slim{height:42px;flex:1;max-width:690px}
+.sbox .ic{width:20px;height:20px;fill:#9aa0a6;margin-right:10px;flex:none}
+.sbox input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:16px Arial,sans-serif;color:var(--t);-webkit-appearance:none}
+.sbox input::-webkit-search-cancel-button{display:none}
+.sug{display:none;position:absolute;left:0;right:0;top:100%;margin:0;padding:6px 0 8px;list-style:none;background:#fff;border-radius:0 0 24px 24px;box-shadow:0 4px 6px rgba(32,33,36,.28);z-index:5}
+.sbox:focus-within .sug.has{display:block}
+.sbox:focus-within:has(.sug.has){border-radius:24px 24px 0 0}
+.sug li{padding:8px 18px;font-size:16px;cursor:pointer}.sug li:active,.sug li:hover{background:#f1f3f4}
+.btns{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;justify-content:center}
+.btns button{background:#f8f9fa;border:1px solid #f8f9fa;border-radius:4px;color:#3c4043;font:14px Arial,sans-serif;height:36px;padding:0 16px;cursor:pointer}
+.btns button:hover{border-color:var(--b)}
+.foot{position:fixed;bottom:0;left:0;right:0;background:#f2f2f2;color:#70757a;font-size:14px;padding:14px 18px;border-top:1px solid #dadce0}
+.rtop{display:flex;align-items:center;padding:12px 14px 0;gap:0}
+.tabs{display:flex;gap:22px;padding:6px 14px 0 14px;border-bottom:1px solid var(--b);font-size:14px;color:var(--g);overflow-x:auto;white-space:nowrap}
+.tabs a{padding:12px 0 10px;border-bottom:3px solid transparent;cursor:pointer}.tabs a.on{color:#1a73e8;border-color:#1a73e8}
+.stats{padding:12px 16px 4px;font-size:13px;color:#70757a}
+.card{margin:8px 12px 0;border:1px solid var(--b);border-radius:12px;padding:12px;max-width:900px}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.card-h h2{margin:0;font-size:20px;font-weight:400}
+.card-h button{border:0;background:#f1f3f4;width:36px;height:36px;border-radius:50%;font-size:22px;color:var(--g);cursor:pointer}
+.months{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px 12px}
+.m h4{margin:0 0 4px;font-size:13px;font-weight:700;color:var(--t)}
+.m table{width:100%;border-collapse:collapse;font-size:11.5px;text-align:center;table-layout:fixed}
+.m th{color:#70757a;font-weight:400;padding:2px 0}.m td{padding:3px 0;color:var(--t)}.m td.sun,.m th.sun{color:#d93025}
+.related{padding:18px 16px 40px;max-width:900px}.related h3{font-size:20px;font-weight:400;margin:0 0 10px}
+.related ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.related li{background:#f1f3f4;border-radius:22px;padding:11px 16px;font-size:14px;cursor:pointer}
+@media(prefers-color-scheme:dark){:root{--b:#3c4043;--t:#e8eaed;--g:#9aa0a6}html,body,.sbox,.sug{background:#202124}.foot{background:#171717;border-color:#3c4043}.btns button{background:#303134;border-color:#303134;color:#e8eaed}.related li,.card-h button{background:#303134}.sug li:active,.sug li:hover{background:#303134}}
