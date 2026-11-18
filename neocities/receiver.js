@@ -8,10 +8,10 @@
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
   // ---------- ajustes ----------
-  const DEF = { web: 1, voice: 0, pad: 1, gest: 0, speak: 1, seat: 1, vib: 1, dim: 0, watch: 0 };
+  const DEF = { web: 1, voice: 0, pad: 1, gest: 0, speak: 1, seat: 1, vib: 1, dim: 0, watch: 0, autosend: 1 };
   const S = {}; for (const k in DEF) S[k] = store.get('rx_' + k, String(DEF[k])) === '1';
-  S.gap = +store.get('rx_gap', '650') || 650; S.sens = +store.get('rx_sens', '30') || 30;
-  const saveS = () => { for (const k in DEF) store.set('rx_' + k, S[k] ? '1' : '0'); store.set('rx_gap', S.gap); store.set('rx_sens', S.sens); };
+  S.gap = +store.get('rx_gap', '650') || 650; S.sens = +store.get('rx_sens', '30') || 30; S.clearSec = +store.get('rx_clearSec', '6');
+  const saveS = () => { for (const k in DEF) store.set('rx_' + k, S[k] ? '1' : '0'); store.set('rx_gap', S.gap); store.set('rx_sens', S.sens); store.set('rx_clearSec', S.clearSec); };
 
   // ---------- clave y enlace del espectador ----------
   const rnd = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), (b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
@@ -67,7 +67,7 @@
   function deliver(ev, o = {}) { cur = ev; showEv(ev, !o.silent); if (!o.silent) { speak(ev); vibrate(ev); } }
   function local(year, src) {
     const i = MC.info(year);
-    if (!i) { toast('Ese año no está entre 1600 y 9999'); buzz([40, 40, 40]); return false; }
+    if (!i) { toast(`${year} no está entre 1600 y 9999`); buzz([40, 40, 40]); return false; }
     deliver({ seat: 0, label: src, ...i, ts: Date.now(), src }); mirror(i, 0); return true;
   }
 
@@ -98,21 +98,42 @@
   setInterval(() => { if (es && es.readyState === 2) connect(); }, 5000);
 
   // ---------- año tecleado (4 dígitos) ----------
-  let d = ['', '', '', ''], ix = 0, lastSrc = 'manual';
-  function drawDigits() { $('#digits').innerHTML = d.map((x, n) => `<i class="${x ? 'f' : ''}${n === ix ? ' c' : ''}">${x || '–'}</i>`).join(''); $('#gpDots').innerHTML = d.map((x) => `<i class="${x ? 'f' : ''}"></i>`).join(''); }
-  function resetDigits() { d = ['', '', '', '']; ix = 0; drawDigits(); }
+  let d = ['', '', '', ''], ix = 0, lastSrc = 'manual', clr = null;
+  function drawDigits() {
+    $('#digits').innerHTML = d.map((x, n) => `<i class="${x ? 'f' : ''}${n === ix ? ' c' : ''}">${x || '–'}</i>`).join('');
+    $('#gpDots').innerHTML = d.map((x) => `<i class="${x ? 'f' : ''}"></i>`).join('');
+    $('#gpDigits').textContent = d.map((x) => x || '·').join(' ');
+  }
+  function resetDigits() { clearTimeout(clr); d = ['', '', '', '']; ix = 0; drawDigits(); }
+  // los dígitos sueltos se borran solos: evita que un gesto accidental se mezcle con el año siguiente
+  function armClear() { clearTimeout(clr); if (S.clearSec > 0 && ix > 0 && ix < 4) clr = setTimeout(() => { resetDigits(); toast('Dígitos sueltos borrados'); buzz([30, 60, 30]); }, S.clearSec * 1000); }
+  // validación al teclear: nunca se acepta un dígito que haga imposible un año de 1600 a 9999
+  function badDigit(n) {
+    const t = d.slice(0, ix).join('') + n;
+    if (t.length === 1 && n === '0') return 'Un año no empieza por 0';
+    if (t.length === 2 && t[0] === '1' && +t[1] < 6) return 'Con 1 delante el año debe ser 16… o mayor';
+    return '';
+  }
+  function sendYear() {
+    if (ix < 4) { buzz([40, 40, 40]); toast(ix ? `Faltan dígitos (llevas ${d.slice(0, ix).join('')})` : 'No hay año tecleado'); return; }
+    const y = +d.join(''), src = lastSrc; resetDigits(); local(y, src);
+  }
   function typeDigit(n, src) {
-    lastSrc = src || lastSrc; d[ix] = String(n); ix++;
-    if (ix > 3) { const y = +d.join(''); resetDigits(); local(y, lastSrc); } else drawDigits();
+    n = String(n); lastSrc = src || lastSrc;
+    if (ix > 3) { buzz([40, 40, 40]); toast('Ya hay 4 dígitos: envía el año o bórralo'); return; }
+    const bad = badDigit(n); if (bad) { buzz([40, 40, 40]); toast(bad); return; }
+    d[ix] = n; ix++; drawDigits();
+    if (ix > 3) { clearTimeout(clr); if (S.autosend) sendYear(); } else armClear();
   }
   const A = {
-    back() { if (ix > 0) { ix--; d[ix] = ''; drawDigits(); } },
+    back() { if (ix > 0) { ix--; d[ix] = ''; drawDigits(); armClear(); } },
     clear() { resetDigits(); },
+    send() { sendYear(); },
     replay() { if (cur) { showEv(cur, false); speak(cur); vibrate(cur); } else toast('Aún no hay ningún código'); },
     dim() { S.dim = !S.dim; saveS(); apply(); },
   };
-  const ACTS = [...Array(10).keys()].map((n) => 'd' + n).concat(['back', 'clear', 'replay', 'dim']);
-  const ACT_NAME = { back: 'Borrar el último dígito', clear: 'Limpiar el año tecleado', replay: 'Repetir el último código', dim: 'Pantalla discreta (activar/desactivar)' };
+  const ACTS = [...Array(10).keys()].map((n) => 'd' + n).concat(['back', 'clear', 'send', 'replay', 'dim']);
+  const ACT_NAME = { back: 'Borrar el último dígito', clear: 'Limpiar el año tecleado', send: 'Enviar el año (cuando hay 4 dígitos)', replay: 'Repetir el último código', dim: 'Pantalla discreta (activar/desactivar)' };
   const actName = (a) => /^d\d$/.test(a) ? 'Dígito ' + a[1] : ACT_NAME[a] || a;
   function run(a, src) { if (/^d\d$/.test(a)) typeDigit(a[1], src || 'gesto'); else if (A[a]) A[a](); }
   $('#keys').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => `<button data-n="${n}">${n}</button>`).join('');
@@ -120,7 +141,7 @@
   $('#kBack').onclick = () => A.back(); $('#kReplay').onclick = () => A.replay();
 
   // ---------- gestos: lista editable + motor ----------
-  const DEF_G = [['UU', 'd1'], ['UR', 'd2'], ['UD', 'd3'], ['UL', 'd4'], ['RU', 'd5'], ['RR', 'd6'], ['RD', 'd7'], ['RL', 'd8'], ['DU', 'd9'], ['DR', 'd0'], ['DD', 'back'], ['DL', 'clear'], ['LU', 'replay'], ['LR', 'dim']];
+  const DEF_G = [['UU', 'd1'], ['UR', 'd2'], ['UD', 'd3'], ['UL', 'd4'], ['RU', 'd5'], ['RR', 'd6'], ['RD', 'd7'], ['RL', 'd8'], ['DU', 'd9'], ['DR', 'd0'], ['DD', 'back'], ['DL', 'clear'], ['LU', 'replay'], ['LR', 'dim'], ['LD', 'send']];
   const defaults = () => DEF_G.map(([seq, act], i) => ({ id: 'g' + i, seq, act }));
   const okG = (g) => g && /^[UDLR]{1,5}$/.test(g.seq) && ACTS.includes(g.act);
   let G; try { const a = JSON.parse(store.get('rx_g2', 'null')); G = Array.isArray(a) && a.every(okG) ? a : defaults(); } catch { G = defaults(); }
@@ -135,10 +156,18 @@
     const el = $('#prSeq'); el.classList.toggle('ph', !s); el.textContent = s ? arrows(s) : 'Desliza aquí o usa la cruceta';
     $('#gpSeq').textContent = arrows(s); const a = $('#prAct'); a.textContent = msg || ' '; a.classList.toggle('bad', !!bad);
   }
-  function dir(dn) {
+  // Entrada de direcciones (pantalla, teclado o mando). Se ignoran duplicados entre fuentes
+  // (un mando que llega a la vez como teclado y como gamepad) y las teclas mantenidas.
+  const lastAt = {}; const inLog = [];
+  function logIn(t) { inLog.unshift(t); inLog.length = Math.min(inLog.length, 6); $('#inLog').innerHTML = inLog.map(esc).join('<br>'); }
+  function dir(dn, src, raw) {
+    const now = performance.now(), p = lastAt[dn];
+    if (p && p.s !== src && now - p.t < 200) { logIn(`${src}${raw ? ' · ' + raw : ''} → ${arrows(dn)}  (duplicado de ${p.s}, ignorado)`); return; }
+    lastAt[dn] = { t: now, s: src };
+    logIn(`${src}${raw ? ' · ' + raw : ''} → ${arrows(dn)}`);
     if (sink) return sink(dn);
     buzz(12); buf += dn; showSeq(buf); clearTimeout(gt);
-    const exact = G.some((g) => g.seq === buf), longer = G.some((g) => g.seq.length > buf.length && g.seq.startsWith(buf));
+    const longer = G.some((g) => g.seq.length > buf.length && g.seq.startsWith(buf));
     if (!longer) return resolve();
     gt = setTimeout(resolve, S.gap);   // hay gestos más largos: se espera la pausa
   }
@@ -155,7 +184,7 @@
     el.addEventListener('pointerup', (e) => { if (id !== e.pointerId) return; id = null; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) < S.sens) return; cb(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U')); });
     el.addEventListener('pointercancel', () => { id = null; });
   }
-  swipe($('#practice'), dir); swipe($('#gestPad'), dir); swipe($('#cap'), dir);
+  swipe($('#practice'), (x) => dir(x, 'pantalla')); swipe($('#gestPad'), (x) => dir(x, 'pantalla')); swipe($('#cap'), (x) => dir(x, 'pantalla'));
 
   // editor de gestos
   let edit = null;
@@ -191,28 +220,59 @@
   });
   $('#gap').oninput = (e) => { S.gap = +e.target.value; $('#gapv').textContent = S.gap + ' ms'; saveS(); };
   $('#sens').oninput = (e) => { S.sens = +e.target.value; $('#sensv').textContent = S.sens + ' px'; saveS(); };
+  $('#clearSec').oninput = (e) => { S.clearSec = +e.target.value; $('#clearv').textContent = S.clearSec ? S.clearSec + ' s' : 'nunca'; saveS(); };
 
   // ---------- mando / teclado ----------
-  const KM_DEF = { U: 'ArrowUp', D: 'ArrowDown', L: 'ArrowLeft', R: 'ArrowRight', ok: 'Enter', clear: 'Escape' };
-  let KM = { ...KM_DEF }; try { Object.assign(KM, JSON.parse(store.get('rx_km2', '{}'))); } catch {}
-  const KN = { U: '↑ Arriba', D: '↓ Abajo', L: '← Izquierda', R: '→ Derecha', ok: 'Botón A (repetir)', clear: 'Botón B (borrar)' };
-  let learning = null;
-  function drawMap() { $('#map').innerHTML = Object.keys(KN).map((a) => `<button data-a="${a}" class="${learning === a ? 'learn' : ''}">${KN[a]}: <b>${learning === a ? 'pulsa un botón…' : esc(KM[a])}</b></button>`).join(''); }
-  $('#map').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { learning = b.dataset.a; drawMap(); } });
-  $('#resetKeys').onclick = () => { KM = { ...KM_DEF }; store.set('rx_km2', '{}'); drawMap(); };
+  // Cada acción del mando (↑ ↓ ← → y dos botones) se puede asignar a una tecla o a un botón/eje del gamepad.
+  const BIND_DEF = { U: { k: 'ArrowUp', g: 12 }, D: { k: 'ArrowDown', g: 13 }, L: { k: 'ArrowLeft', g: 14 }, R: { k: 'ArrowRight', g: 15 }, ok: { k: 'Enter', g: 0 }, clear: { k: 'Escape', g: 1 } };
+  let BIND = JSON.parse(JSON.stringify(BIND_DEF)), learned = {};
+  try { learned = JSON.parse(store.get('rx_bind3', '{}')); for (const a in learned) if (BIND[a]) BIND[a] = learned[a]; } catch {}
+  const BN = { U: '↑ Arriba', D: '↓ Abajo', L: '← Izquierda', R: '→ Derecha', ok: 'Botón A (repetir)', clear: 'Botón B (limpiar)' };
+  const bindTxt = (b) => [b.k && 'tecla ' + b.k, b.g !== undefined && 'botón ' + b.g, b.ax !== undefined && `eje ${b.ax}${b.s > 0 ? '+' : '−'}`].filter(Boolean).join(' / ');
+  let learnQ = [];
+  const learning = () => learnQ[0] || null;
+  function drawMap() {
+    $('#map').innerHTML = Object.keys(BN).map((a) => `<button data-a="${a}" class="${learning() === a ? 'learn' : ''}">${BN[a]}: <b>${learning() === a ? 'pulsa el botón…' : esc(bindTxt(BIND[a]))}</b></button>`).join('');
+    $('#wiz').textContent = learnQ.length ? `Pulsa en el mando: ${BN[learnQ[0]]}` : 'Asignar la cruceta paso a paso';
+  }
+  function learn(b) {
+    const a = learning(); if (!a) return;
+    for (const o in BIND) if (o !== a && ((b.k && BIND[o].k === b.k) || (b.g !== undefined && BIND[o].g === b.g) || (b.ax !== undefined && BIND[o].ax === b.ax && BIND[o].s === b.s))) { toast(`Ese botón ya es «${BN[o]}»`); return; }
+    BIND[a] = b; learned[a] = b; store.set('rx_bind3', JSON.stringify(learned)); learnQ.shift(); buzz(20);
+    if (!learnQ.length) toast('Mando asignado ✓'); drawMap();
+  }
+  $('#map').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { learnQ = [b.dataset.a]; drawMap(); } });
+  $('#wiz').onclick = () => { learnQ = learnQ.length ? [] : ['U', 'D', 'L', 'R']; drawMap(); };
+  $('#resetKeys').onclick = () => { BIND = JSON.parse(JSON.stringify(BIND_DEF)); learned = {}; learnQ = []; store.set('rx_bind3', '{}'); drawMap(); };
   const padOn = () => S.pad || sink || tab === 'gest';
+  const keyId = (e) => (e.key && e.key !== 'Unidentified' ? e.key : e.code);
+  function fire(a, src, raw) { if ('UDLR'.includes(a)) dir(a, src, raw); else if (!sink) { a === 'ok' ? A.replay() : A.clear(); } }
   addEventListener('keydown', (e) => {
-    if (learning) { KM[learning] = e.key; store.set('rx_km2', JSON.stringify(KM)); learning = null; drawMap(); e.preventDefault(); return; }
+    const id = keyId(e);
+    if (learning()) { e.preventDefault(); if (!e.repeat) learn({ k: id }); return; }
     if (!padOn() || (e.target.matches && e.target.matches('input,textarea'))) return;
+    if (e.repeat) { e.preventDefault(); return; }            // tecla mantenida: no cuenta
     if (/^[0-9]$/.test(e.key) && !sink) { typeDigit(e.key, 'manual'); e.preventDefault(); return; }
-    for (const a in KM) if (KM[a] === e.key) { e.preventDefault(); if ('UDLR'.includes(a)) dir(a); else if (!sink) a === 'ok' ? A.replay() : A.clear(); return; }
+    for (const a in BIND) if (BIND[a].k === id) { e.preventDefault(); fire(a, 'teclado', id); return; }
   });
   const prev = {};
   (function poll() {
-    if (padOn() && navigator.getGamepads) for (const g of navigator.getGamepads()) {
-      if (!g) continue; const b = g.buttons, p = (n) => !!(b[n] && b[n].pressed);
-      const st = { U: p(12) || g.axes[1] < -.7, D: p(13) || g.axes[1] > .7, L: p(14) || g.axes[0] < -.7, R: p(15) || g.axes[0] > .7, ok: p(0), clear: p(1) };
-      for (const a in st) { if (st[a] && !prev[a]) { if ('UDLR'.includes(a)) dir(a); else if (!sink) a === 'ok' ? A.replay() : A.clear(); } prev[a] = st[a]; }
+    const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+    for (const g of pads) {
+      const down = (b) => (b.g !== undefined && g.buttons[b.g] && g.buttons[b.g].pressed) || (b.ax !== undefined && Math.abs(g.axes[b.ax] || 0) > .6 && Math.sign(g.axes[b.ax]) === b.s);
+      if (learning()) {                                       // asignación: primer botón o eje que se pulse
+        let found = null;
+        g.buttons.forEach((bt, i) => { if (!found && bt.pressed && !prev['L' + i]) found = { g: i }; prev['L' + i] = bt.pressed; });
+        g.axes.forEach((v, i) => { const k = 'A' + i; if (!found && Math.abs(v) > .6 && !prev[k]) found = { ax: i, s: Math.sign(v) }; prev[k] = Math.abs(v) > .6; });
+        if (found) learn(found); continue;
+      }
+      if (!padOn()) continue;
+      for (const a in BIND) {
+        const b = BIND[a], k = g.index + a; let on = !!down(b);
+        if (!on && learned[a] === undefined && 'UDLR'.includes(a)) on = (a === 'U' && g.axes[1] < -.7) || (a === 'D' && g.axes[1] > .7) || (a === 'L' && g.axes[0] < -.7) || (a === 'R' && g.axes[0] > .7);
+        if (on && !prev[k]) fire(a, 'mando', b.g !== undefined ? 'botón ' + b.g : 'eje ' + b.ax);
+        prev[k] = on;
+      }
     }
     requestAnimationFrame(poll);
   })();
@@ -266,18 +326,18 @@
     $$('.sw').forEach((i) => { i.checked = !!S[i.dataset.k]; });
     document.body.classList.toggle('dim', S.dim); $('#padmap').hidden = !S.pad;
     $('#gestPad').classList.toggle('on', S.gest && tab === 'home');
-    $('#gap').value = S.gap; $('#gapv').textContent = S.gap + ' ms'; $('#sens').value = S.sens; $('#sensv').textContent = S.sens + ' px';
+    $('#gap').value = S.gap; $('#gapv').textContent = S.gap + ' ms'; $('#sens').value = S.sens; $('#sensv').textContent = S.sens + ' px'; $('#clearSec').value = S.clearSec; $('#clearv').textContent = S.clearSec ? S.clearSec + ' s' : 'nunca';
     $('#wtopic').textContent = TOPIC + '-w'; $('#micState').textContent = S.voice ? '● Escuchando' : '';
     if (S.voice) voiceOn(); else voiceOff();
   }
   $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
 
   // ---------- inicio ----------
-  async function begin(t) {
+  function begin(t) {
     $('#welcome').remove(); $('#app').removeAttribute('aria-hidden');
-    try { if ('wakeLock' in navigator) { await navigator.wakeLock.request('screen'); document.addEventListener('visibilitychange', () => { if (!document.hidden) navigator.wakeLock.request('screen').catch(() => {}); }); } } catch {}
+    apply(); connect(); go(t || 'home');          // primero arranca todo; lo opcional después y sin esperar
+    try { if ('wakeLock' in navigator) { navigator.wakeLock.request('screen').catch(() => {}); document.addEventListener('visibilitychange', () => { if (!document.hidden) navigator.wakeLock.request('screen').catch(() => {}); }); } } catch {}
     try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch {}
-    apply(); connect(); go(t || 'home');
   }
   $('#start').onclick = () => begin('home'); $('#startHelp').onclick = () => begin('help');
   $('#keyshow').textContent = key; drawDigits(); drawGestures(); drawMap(); drawLink(); drawBoard(null); showSeq('');

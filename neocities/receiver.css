@@ -121,3 +121,6 @@ body.dim .gp-hint,body.dim .gp-seq{opacity:0}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media(min-width:700px){#app{max-width:560px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}.nav{max-width:560px;left:50%;transform:translateX(-50%)}.gestpad{max-width:560px;left:50%;transform:translateX(-50%)}}
+
+.monitor{padding:14px 16px;margin-bottom:12px}.inlog{font-size:13px;line-height:1.7;color:var(--t2);font-variant-numeric:tabular-nums;min-height:44px;-webkit-user-select:text;user-select:text}
+.gp-digits{color:#2c3452;font-size:34px;letter-spacing:8px;font-weight:700;font-variant-numeric:tabular-nums}body.dim .gp-digits{opacity:.5}

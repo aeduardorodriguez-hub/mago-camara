@@ -3,8 +3,8 @@
    El año se envía al receptor en cuanto se reconoce en la búsqueda. */
 (() => {
   'use strict';
-  const BRAND = 'Buscador';            // Texto del logotipo. Para usar tu propio logotipo, sube "logo.png" junto a index.html
-  const IDLE_MIN = 6;                  // minutos sin actividad -> se pasa al buscador real
+  const CFG = Object.assign({ brand: 'Buscador', logo: 'logo.png', idleMinutes: 6 }, window.MC_CONFIG || {});
+  const BRAND = CFG.brand, IDLE_MIN = CFG.idleMinutes;
   const REAL = 'https://www.google.com/search?q=';
   const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -12,9 +12,28 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
-  // ---------- logotipo (texto, o logo.png propio si existe) ----------
-  $('#logo').innerHTML = [...BRAND].map((c) => `<span>${c}</span>`).join('');
-  { const im = new Image(); im.alt = BRAND; im.onload = () => { const l = $('#logo'); l.textContent = ''; l.appendChild(im); }; im.src = 'logo.png'; }
+  // ---------- logotipo ----------
+  // Prueba el archivo indicado en config.js y variantes habituales de nombre/extensión (Neocities distingue mayúsculas).
+  // Si ninguno carga, se muestra el texto. Añade ?debug=1 a la dirección para ver qué se intentó.
+  (function logo() {
+    const box = $('#logo'), dbg = new URL(location.href).searchParams.has('debug'), log = [];
+    const base = String(CFG.logo || 'logo.png'), stem = base.replace(/\.[^./]+$/, ''), ext = (base.match(/\.[^./]+$/) || ['.png'])[0];
+    const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const stems = [...new Set([stem, stem.toLowerCase(), cap(stem.toLowerCase()), stem.toUpperCase(), 'logo', 'Logo', 'LOGO'])];
+    const exts = [...new Set([ext.toLowerCase(), ext.toUpperCase(), '.png', '.PNG', '.jpg', '.JPG', '.jpeg', '.webp', '.svg', '.gif'])];
+    const names = [...new Set([base, ...stems.flatMap((t) => exts.map((e) => t + e))])];
+    const v = Math.floor(Date.now() / 60000);   // evita que el navegador reutilice una respuesta antigua (404) en caché
+    box.style.visibility = 'hidden';
+    const text = () => { box.innerHTML = [...BRAND].map((c) => `<span>${c}</span>`).join(''); box.style.visibility = ''; };
+    const done = () => { if (dbg) { const p = document.createElement('pre'); p.style.cssText = 'position:fixed;left:0;right:0;bottom:60px;margin:0;padding:8px;background:#000c;color:#0f0;font:11px monospace;z-index:99;white-space:pre-wrap'; p.textContent = log.join('\n'); document.body.appendChild(p); } };
+    (function next(i) {
+      if (i >= names.length) { text(); log.push('Ningún logotipo encontrado -> se muestra el texto'); return done(); }
+      const im = new Image(), url = new URL(names[i], location.href).href;
+      im.onload = () => { log.push('OK  ' + url); box.textContent = ''; im.alt = BRAND; box.appendChild(im); box.style.visibility = ''; done(); };
+      im.onerror = () => { log.push('404 ' + url); next(i + 1); };
+      im.src = url + (url.includes('?') ? '&' : '?') + 'v=' + v;
+    })(0);
+  })();
 
   // ---------- sala / sesión ----------
   const u = new URL(location.href);
@@ -29,11 +48,15 @@
   const TOPIC = 'mc-' + room, short = sid.replace(/[^a-z0-9]/gi, '').slice(0, 12);
   let pending = null, sending = false, lastSent = 0;
   async function flush() {
-    if (sending || !pending) return; sending = true;
+    if (sending || !pending) return; sending = true; let wait = 1500;
     while (pending) {
       const y = pending;
-      try { await fetch('https://ntfy.sh/' + TOPIC, { method: 'POST', body: JSON.stringify({ s: short, l: label, y }), keepalive: true }); if (pending === y) pending = null; }
-      catch { await new Promise((r) => setTimeout(r, 1500)); }
+      try {
+        const r = await fetch('https://ntfy.sh/' + TOPIC, { method: 'POST', body: JSON.stringify({ s: short, l: label, y }), keepalive: true });
+        if (r.ok) { if (pending === y) pending = null; wait = 1500; continue; }   // solo cuenta como enviado si el servidor lo aceptó
+        wait = r.status === 429 ? Math.max(wait, 4000) : wait;                      // 429 = demasiadas peticiones: esperar y reintentar
+      } catch {}
+      await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 1.5, 8000);
     }
     sending = false;
   }

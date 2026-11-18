@@ -83,7 +83,7 @@
       <label class="mode"><span class="mi"><svg><use href="#i-globe"/></svg></span><span class="mt"><b>Web</b><small>El año que busca el espectador llega solo.</small></span><input type="checkbox" class="sw" data-k="web"></label>
       <label class="mode"><span class="mi"><svg><use href="#i-mic"/></svg></span><span class="mt"><b>Voz</b><small>Reconoce el año que dicen en voz alta. <em id="micState"></em></small></span><input type="checkbox" class="sw" data-k="voice"></label>
       <label class="mode"><span class="mi"><svg><use href="#i-tune"/></svg></span><span class="mt"><b>Mando 8BitDo / teclado</b><small>La cruceta (↑ ↓ ← →) dibuja tus gestos; los números teclean.</small></span><input type="checkbox" class="sw" data-k="pad"></label>
-      <div class="sub" id="padmap"><div class="sub-h">Asignar botones del mando <button class="link" id="resetKeys">Restablecer</button></div><div class="map" id="map"></div><small class="muted">Toca una acción y pulsa el botón del mando (modo teclado).</small></div>
+      <div class="sub" id="padmap"><div class="sub-h">Botones del mando <button class="link" id="resetKeys">Restablecer</button></div><button class="btn wide" id="wiz" style="margin:0 0 10px">Asignar la cruceta paso a paso</button><div class="map" id="map"></div><small class="muted">Funciona con el mando como teclado o como gamepad. Pulsa «Asignar» y toca en el mando ↑, ↓, ←, → cuando se te pida; o toca una acción para cambiar solo esa. Los movimientos son los mismos que tus gestos.</small></div>
       <label class="mode"><span class="mi"><svg><use href="#i-touch"/></svg></span><span class="mt"><b>Gestos en pantalla</b><small>Pantalla negra: desliza ↑ ↓ ← → para teclear el año sin mirar.</small></span><input type="checkbox" class="sw" data-k="gest"></label>
       <button class="btn wide" data-go="gest"><svg><use href="#i-edit"/></svg>Configurar gestos</button>
 
@@ -101,11 +101,14 @@
       <h2 class="sec">Gestos</h2>
       <p class="muted pad">Cada gesto es una secuencia de deslizamientos <b>↑ ↓ ← →</b> (U D L R). Son idénticos a los que haces con la cruceta del mando.</p>
       <div class="practice" id="practice"><div class="pr-h">Zona de práctica</div><div class="pr-seq" id="prSeq">Desliza aquí o usa la cruceta</div><div class="pr-act" id="prAct">&nbsp;</div></div>
+      <div class="card monitor"><div class="pr-h">Monitor de entrada</div><div class="inlog" id="inLog">Pulsa un botón del mando o desliza para ver qué se recibe.</div></div>
       <div class="list" id="glist"></div>
       <div class="row2"><button class="btn primary" id="gnew"><svg><use href="#i-plus"/></svg>Nuevo gesto</button><button class="btn" id="greset">Restaurar</button></div>
       <h3 class="sec2">Ajuste fino</h3>
       <div class="slide"><label>Pausa para cerrar un gesto <b id="gapv"></b></label><input type="range" id="gap" min="350" max="1500" step="50"></div>
       <div class="slide"><label>Sensibilidad del deslizamiento <b id="sensv"></b></label><input type="range" id="sens" min="14" max="80" step="2"></div>
+      <label class="mode sm"><span class="mt"><b>Enviar al completar el 4º dígito</b><small>Si lo apagas, el año se envía con el gesto «Enviar el año».</small></span><input type="checkbox" class="sw" data-k="autosend"></label>
+      <div class="slide"><label>Borrar dígitos sueltos tras <b id="clearv"></b></label><input type="range" id="clearSec" min="0" max="15" step="1"></div>
       <small class="muted pad">Los gestos de la misma longitud se ejecutan al instante. Si un gesto es el comienzo de otro más largo, se espera la pausa.</small>
     </section>
 
@@ -157,7 +160,7 @@
     </section>
   </main>
 
-  <div id="gestPad" class="gestpad"><div class="gp-dots" id="gpDots"></div><div class="gp-hint" id="gpHint">Gestos activos · desliza ↑ ↓ ← →</div><div class="gp-seq" id="gpSeq"></div></div>
+  <div id="gestPad" class="gestpad"><div class="gp-dots" id="gpDots"></div><div class="gp-hint" id="gpHint">Gestos activos · desliza ↑ ↓ ← →</div><div class="gp-digits" id="gpDigits"></div><div class="gp-seq" id="gpSeq"></div></div>
 
   <nav class="nav" id="nav">
     <button data-go="home" class="on"><svg><use href="#i-home"/></svg><span>Inicio</span></button>

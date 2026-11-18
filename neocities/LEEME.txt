@@ -2,7 +2,7 @@ CALENDARIO MENTAL - versión Neocities (sin servidor)
 
 SUBIR
 1) Sube TODO el contenido de esta carpeta a la raíz de tu sitio Neocities.
-2) (Opcional) Sube un archivo "logo.png" (tu propio logotipo) junto a index.html: sustituye al texto "Buscador" de la página de inicio.
+2) LOGOTIPO (opcional): sube tu PNG junto a index.html con el nombre EXACTO logo.png (o cambia el nombre en config.js). Para comprobarlo abre index.html?debug=1: muestra qué archivos intentó cargar.
 
 USAR
 - MENTALISTA: abre https://TUSITIO.neocities.org/r.html -> "Empezar".
@@ -13,3 +13,9 @@ USAR
 - La pestaña "Ayuda" del receptor trae las instrucciones y la fórmula.
 
 TRANSPORTE: tema secreto en ntfy.sh (gratis, sin cuenta). Límite público aprox.: 250 mensajes/día por IP que publica.
+
+MANDO / GESTOS (novedades)
+- Entrada > Mando: "Asignar la cruceta paso a paso" y pulsa en el mando ↑ ↓ ← →. Funciona como teclado o como gamepad; las señales duplicadas y las teclas mantenidas se ignoran.
+- Gestos > "Monitor de entrada" muestra lo que llega de cada fuente (pantalla, teclado, mando) para diagnosticar.
+- Dígitos sueltos: se borran solos tras unos segundos (ajustable) y no se acepta un dígito que haga imposible un año de 1600 a 9999.
+- Opcional: apagar "Enviar al completar el 4º dígito" y enviar con el gesto "Enviar el año".
