@@ -11,7 +11,7 @@ android {
 tasks.register('prepWeb') {
     doLast {
         def out = file('build/web'); out.deleteDir(); out.mkdirs()
-        copy { from '../../neocities'; into out; include 'r.html', 'receiver.js', 'shared.js', 'manifest.json', 'icon-*.png' }
+        copy { from '../../neocities'; into out; include 'r.html', 'receiver.js', 'receiver.css', 'qr.js', 'shared.js', 'manifest.json', 'icon-*.png' }
         copy { from 'android.js'; into out }
         def h = new File(out, 'r.html'); h.text = h.text.replace('<script src="shared.js">', '<script src="android.js"></script>\n<script src="shared.js">')
     }

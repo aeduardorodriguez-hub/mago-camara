@@ -4,78 +4,187 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#070a12">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
 <title>Receptor</title>
-<style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#000;color:#e8e8e8;font-family:system-ui,Roboto,Arial,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
-#start{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:center;justify-content:center;font-size:20px;color:#888}
-#top{height:52px;display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid #1c1c1c;font-size:13px;color:#777}
-#dot{width:10px;height:10px;border-radius:50%;background:#a33}#dot.on{background:#2a5}
-#top .sp{flex:1}#top button{background:#161616;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;padding:8px 12px;font-size:14px}
-#main{height:calc(100% - 52px);display:flex;flex-direction:column}
-#card{padding:18px 16px 10px;text-align:center;min-height:210px}
-#who{font-size:16px;color:#888;height:22px}
-#code{font-size:min(38vw,190px);font-weight:700;line-height:1;margin:6px 0;color:#fff}
-#sub{font-size:20px;color:#9a9a9a;height:26px}#sub b{color:#f5b942;margin-left:10px;font-weight:600}
-body.dim #code,body.dim #sub,body.dim #who{opacity:.12}
-#board{flex:1;overflow:auto;padding:0 12px;border-top:1px solid #151515}
-.row{display:flex;align-items:center;gap:10px;padding:11px 6px;border-bottom:1px solid #151515;font-size:17px}
-.row .s{width:90px;color:#777;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row .y{flex:1;color:#bbb}.row .c{font-size:24px;font-weight:700;color:#fff;min-width:44px;text-align:right}.row .b{color:#f5b942;font-size:12px;width:16px}
-.row.new{background:#14213a}
-#pad{border-top:1px solid #1c1c1c;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#080808}
-#digits{display:flex;justify-content:center;gap:8px;margin-bottom:8px}
-#digits i{font-style:normal;width:46px;height:56px;border:1px solid #2a2a2a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#ccc}
-#digits i.cur{border-color:#4a8cff;color:#fff}
-#keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-#keys button{background:#141414;border:1px solid #262626;color:#ddd;border-radius:10px;height:46px;font-size:20px}
-#keys button:active{background:#222}
-#panel{position:fixed;inset:52px 0 0 0;background:#0b0b0b;z-index:20;padding:14px;overflow:auto;display:none}
-#panel.open{display:block}
-#panel h3{margin:18px 0 6px;font-size:13px;color:#777;text-transform:uppercase;letter-spacing:.08em}
-.t{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #181818;font-size:16px}
-.t input{width:44px;height:26px}
-.map{display:flex;flex-wrap:wrap;gap:6px}.map button{background:#161616;border:1px solid #2a2a2a;color:#ccc;border-radius:8px;padding:8px 10px}.map button.learn{border-color:#4a8cff}
-small{color:#666;display:block;margin:6px 0 0;line-height:1.35}
-#gest{position:fixed;left:0;right:0;top:52px;bottom:0;z-index:15;display:none;background:#000;touch-action:none}
-#gest.on{display:block}#gest u{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-decoration:none;color:#222;font-size:12px}
-#mic{position:fixed;right:10px;bottom:10px;z-index:16;font-size:11px;color:#333;display:none}
-</style>
+<link rel="stylesheet" href="receiver.css">
 </head>
 <body>
-<div id="start">Toca para iniciar</div>
-<div id="top"><span id="dot"></span><span id="pres">–</span><span class="sp"></span><button id="menu">Modos</button></div>
-<div id="main">
-  <div id="card"><div id="who"></div><div id="code">·</div><div id="sub"></div></div>
-  <div id="board"></div>
-  <div id="pad"><div id="digits"></div>
-    <div id="keys"></div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+<symbol id="i-tune" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></symbol>
+<symbol id="i-touch" viewBox="0 0 24 24"><path d="M9 11.24V7.5a2.5 2.5 0 0 1 5 0v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.91-1.38z"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+<symbol id="i-U" viewBox="0 0 24 24"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></symbol>
+<symbol id="i-D" viewBox="0 0 24 24"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></symbol>
+<symbol id="i-L" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
+<symbol id="i-R" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H7.83l3.58-3.59L10 7l-6 6 6 6 1.41-1.41L7.83 14H19z" transform="translate(0 -1)"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a8.2 8.2 0 0 1 0-4h3.38a16.5 16.5 0 0 0 0 4H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96A14.2 14.2 0 0 1 10.09 16h3.82A14.2 14.2 0 0 1 12 19.96zM14.34 14H9.66a14.7 14.7 0 0 1 0-4h4.68a14.7 14.7 0 0 1 0 4zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14a16.5 16.5 0 0 0 0-4h3.38a8.2 8.2 0 0 1 0 4h-3.38z"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></symbol>
+</defs></svg>
+
+<!-- BIENVENIDA -->
+<div id="welcome" class="welcome">
+  <div class="w-card">
+    <div class="w-logo"><img src="icon-192.png" alt=""></div>
+    <h1>Receptor de calendario mental</h1>
+    <p>Recibe en tu bolsillo el código del año que busca el espectador. Voz, vibración, reloj, mando o gestos: tú eliges cómo.</p>
+    <button class="btn primary big" id="start">Empezar</button>
+    <button class="btn ghost" id="startHelp">Cómo funciona</button>
+  </div>
 </div>
-<div id="panel">
-  <h3>Recepción (activar los que quieras)</h3>
-  <label class="t">Web · emisor del espectador<input type="checkbox" data-k="web"></label>
-  <label class="t">Voz · reconoce el año que se dice<input type="checkbox" data-k="voice"></label>
-  <label class="t">Mando / teclado (8BitDo Zero2)<input type="checkbox" data-k="pad"></label>
-  <label class="t">Gestos · toques en pantalla negra<input type="checkbox" data-k="gest"></label>
-  <h3>Salida</h3>
-  <label class="t">Voz (auriculares)<input type="checkbox" data-k="speak"></label>
-  <label class="t">Decir número de persona<input type="checkbox" data-k="seat"></label>
-  <label class="t">Notificar al reloj (app ntfy, tema …-w)<input type="checkbox" data-k="watch"></label>
-  <label class="t">Vibración<input type="checkbox" data-k="vib"></label>
-  <label class="t">Pantalla discreta (muy tenue)<input type="checkbox" data-k="dim"></label>
-  <label class="t">Teclado en pantalla<input type="checkbox" data-k="keys"></label>
-  <h3>Mando: asignar botones</h3>
-  <div class="map" id="map"></div>
-  <small>Toca una acción y pulsa el botón del mando (modo teclado). ↑/↓ cambian el dígito, → avanza (al final envía), ← retrocede, OK envía. También sirven los números del teclado. Si el mando está en modo gamepad, funciona la cruceta + A (OK) + B (borrar).</small>
-  <h3>Gestos</h3>
-  <small>Con "Gestos" activo la pantalla queda negra. Cada dígito: toca N veces y espera un instante (1–9). Dos dedos a la vez = 0. Cuatro dígitos = año enviado.</small>
-  <h3>Sala</h3>
-  <small id="keyshow"></small>
-  <div class="map"><button id="clear">Borrar historial</button><button id="link">Enlace espectador</button><button id="site">Sitio</button><button id="newkey">Clave nueva</button><button id="testbtn">Probar salida</button></div>
+
+<div id="app" aria-hidden="true">
+  <header class="bar">
+    <div class="ttl"><span class="logo-dot"></span><b id="barTitle">Inicio</b></div>
+    <div class="chip" id="status"><i id="dot"></i><span id="pres">Conectando…</span></div>
+  </header>
+
+  <main id="main">
+    <!-- ============ INICIO ============ -->
+    <section class="tab on" id="tab-home">
+      <div class="hero" id="hero" hidden>
+        <div class="who" id="who"></div>
+        <div class="code" id="code">·</div>
+        <div class="yr"><span id="yr"></span><span class="leap" id="leap" hidden>Bisiesto</span></div>
+      </div>
+      <div class="empty card" id="empty">
+        <div class="pulse"><i></i><i></i><i></i></div>
+        <h2>Esperando al espectador</h2>
+        <p>Cuando alguien busque un año en tu enlace, el código aparecerá aquí al instante.</p>
+        <ol class="steps">
+          <li><b>1</b><span>Copia tu enlace o muestra el <em>QR</em>.</span></li>
+          <li><b>2</b><span>El espectador lo abre en su móvil.</span></li>
+          <li><b>3</b><span>Escribe «calendario de 1890» y listo.</span></li>
+        </ol>
+        <div class="row2"><button class="btn primary" data-act="copylink"><svg><use href="#i-copy"/></svg>Copiar enlace</button><button class="btn" data-go="set">Ver QR</button></div>
+      </div>
+      <div id="board" class="board"></div>
+      <div class="card keycard">
+        <div class="kc-h"><b>Introducir año a mano</b><span class="muted">Si el espectador se sale de la web</span></div>
+        <div id="digits" class="digits"></div>
+        <div id="keys" class="keys"></div>
+        <div class="row2"><button class="btn" id="kBack">Borrar</button><button class="btn" id="kReplay">Repetir</button></div>
+      </div>
+    </section>
+
+    <!-- ============ ENTRADA ============ -->
+    <section class="tab" id="tab-input">
+      <h2 class="sec">¿Cómo quieres recibir el año?</h2>
+      <p class="muted pad">Activa los que necesites. Pueden funcionar todos a la vez.</p>
+      <label class="mode"><span class="mi"><svg><use href="#i-globe"/></svg></span><span class="mt"><b>Web</b><small>El año que busca el espectador llega solo.</small></span><input type="checkbox" class="sw" data-k="web"></label>
+      <label class="mode"><span class="mi"><svg><use href="#i-mic"/></svg></span><span class="mt"><b>Voz</b><small>Reconoce el año que dicen en voz alta. <em id="micState"></em></small></span><input type="checkbox" class="sw" data-k="voice"></label>
+      <label class="mode"><span class="mi"><svg><use href="#i-tune"/></svg></span><span class="mt"><b>Mando 8BitDo / teclado</b><small>La cruceta (↑ ↓ ← →) dibuja tus gestos; los números teclean.</small></span><input type="checkbox" class="sw" data-k="pad"></label>
+      <div class="sub" id="padmap"><div class="sub-h">Asignar botones del mando <button class="link" id="resetKeys">Restablecer</button></div><div class="map" id="map"></div><small class="muted">Toca una acción y pulsa el botón del mando (modo teclado).</small></div>
+      <label class="mode"><span class="mi"><svg><use href="#i-touch"/></svg></span><span class="mt"><b>Gestos en pantalla</b><small>Pantalla negra: desliza ↑ ↓ ← → para teclear el año sin mirar.</small></span><input type="checkbox" class="sw" data-k="gest"></label>
+      <button class="btn wide" data-go="gest"><svg><use href="#i-edit"/></svg>Configurar gestos</button>
+
+      <h2 class="sec">¿Cómo quieres que te lo diga?</h2>
+      <label class="mode sm"><span class="mt"><b>Voz por auriculares</b><small>Dice el código en voz baja.</small></span><input type="checkbox" class="sw" data-k="speak"></label>
+      <label class="mode sm"><span class="mt"><b>Decir «Persona N»</b><small>Útil con varios espectadores.</small></span><input type="checkbox" class="sw" data-k="seat"></label>
+      <label class="mode sm"><span class="mt"><b>Vibración</b><small>N pulsos = código · una larga = 0 · pulso largo extra = bisiesto.</small></span><input type="checkbox" class="sw" data-k="vib"></label>
+      <label class="mode sm"><span class="mt"><b>Pantalla discreta</b><small>Atenúa la pantalla casi por completo.</small></span><input type="checkbox" class="sw" data-k="dim"></label>
+      <label class="mode sm"><span class="mt"><b>Avisar al reloj</b><small>Notificación vía app ntfy (tema <span id="wtopic">…-w</span>).</small></span><input type="checkbox" class="sw" data-k="watch"></label>
+      <button class="btn wide" id="testbtn">Probar la salida (ejemplo: 1759)</button>
+    </section>
+
+    <!-- ============ GESTOS ============ -->
+    <section class="tab" id="tab-gest">
+      <h2 class="sec">Gestos</h2>
+      <p class="muted pad">Cada gesto es una secuencia de deslizamientos <b>↑ ↓ ← →</b> (U D L R). Son idénticos a los que haces con la cruceta del mando.</p>
+      <div class="practice" id="practice"><div class="pr-h">Zona de práctica</div><div class="pr-seq" id="prSeq">Desliza aquí o usa la cruceta</div><div class="pr-act" id="prAct">&nbsp;</div></div>
+      <div class="list" id="glist"></div>
+      <div class="row2"><button class="btn primary" id="gnew"><svg><use href="#i-plus"/></svg>Nuevo gesto</button><button class="btn" id="greset">Restaurar</button></div>
+      <h3 class="sec2">Ajuste fino</h3>
+      <div class="slide"><label>Pausa para cerrar un gesto <b id="gapv"></b></label><input type="range" id="gap" min="350" max="1500" step="50"></div>
+      <div class="slide"><label>Sensibilidad del deslizamiento <b id="sensv"></b></label><input type="range" id="sens" min="14" max="80" step="2"></div>
+      <small class="muted pad">Los gestos de la misma longitud se ejecutan al instante. Si un gesto es el comienzo de otro más largo, se espera la pausa.</small>
+    </section>
+
+    <!-- ============ AJUSTES ============ -->
+    <section class="tab" id="tab-set">
+      <h2 class="sec">Enlace para el espectador</h2>
+      <div class="card">
+        <label class="fld"><span>Dirección de tu sitio</span><input id="siteIn" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://tusitio.neocities.org/"></label>
+        <div class="linkbox" id="linkBox"></div>
+        <div class="row2"><button class="btn primary" data-act="copylink"><svg><use href="#i-copy"/></svg>Copiar</button><button class="btn" id="shareBtn"><svg><use href="#i-share"/></svg>Compartir</button></div>
+        <div class="qr" id="qr"></div>
+        <small class="muted">Imprime o muestra este QR, o grábalo en una etiqueta NFC. Cada persona entra con el mismo enlace.</small>
+      </div>
+      <h2 class="sec">Sala</h2>
+      <div class="card">
+        <div class="fld"><span>Clave secreta</span><div class="keyshow"><code id="keyshow"></code></div></div>
+        <div class="row2"><button class="btn" id="newkey">Clave nueva</button><button class="btn" id="clear">Borrar historial</button></div>
+        <small class="muted">Receptor y espectadores deben compartir la misma clave. Si la cambias, usa el enlace nuevo.</small>
+      </div>
+    </section>
+
+    <!-- ============ AYUDA ============ -->
+    <section class="tab" id="tab-help">
+      <h2 class="sec">Instrucciones</h2>
+      <details open class="acc"><summary>Cómo funciona (en 30 segundos)</summary>
+        <div class="acc-b"><ol>
+          <li>Entra a <b>Ajustes</b>, copia el enlace del espectador o muestra su QR.</li>
+          <li>El espectador abre el enlace, escribe <em>«calendario de 1890»</em> y elige un calendario.</li>
+          <li>En cuanto escribe el año, <b>tu móvil recibe el código</b> (en pantalla, voz y vibración).</li>
+          <li>Pides la fecha, haces la cuenta y revelas el día de la semana.</li>
+        </ol></div></details>
+      <details class="acc"><summary>La cuenta mental</summary>
+        <div class="acc-b"><p class="formula"><b>día + código del mes + código del año</b> ÷ 7 → el <b>resto</b> es el día.</p>
+        <table class="tbl"><tr><th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th></tr><tr><td>6</td><td>2</td><td>2</td><td>5</td><td>0</td><td>3</td></tr><tr><th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th></tr><tr><td>5</td><td>1</td><td>4</td><td>6</td><td>2</td><td>4</td></tr></table>
+        <p><b>Resto → día:</b> 1 lunes · 2 martes · 3 miércoles · 4 jueves · 5 viernes · 6 sábado · 0 domingo.</p>
+        <p class="warn"><b>Bisiesto:</b> cuando el receptor muestre «Bisiesto», resta 1 <u>solo si la fecha es de enero o febrero</u>. De marzo a diciembre no se resta.</p>
+        <p class="muted">Ejemplo: 14 de julio de 1904 → código 6 (bisiesto, pero es julio, no se resta). 14 + 5 + 6 = 25 → 25 ÷ 7 = 3 resto 4 → <b>jueves</b>.</p></div></details>
+      <details class="acc"><summary>Qué muestra el receptor</summary>
+        <div class="acc-b"><p>El <b>número grande</b> es el código del año (0 a 6). Debajo, el año y, solo si lo es, la etiqueta <span class="leap inl">Bisiesto</span>. Con varios espectadores aparece una tarjeta por persona; toca una para repetir su código por voz y vibración.</p></div></details>
+      <details class="acc"><summary>Vibración y voz</summary>
+        <div class="acc-b"><p><b>Vibración:</b> tantos pulsos cortos como el código (3 = tres pulsos). Código 0 = un pulso largo. Si es bisiesto, al final hay una pausa y un pulso largo extra.</p><p><b>Voz:</b> con auriculares dice «Persona 2. Cuatro. Bisiesto».</p></div></details>
+      <details class="acc"><summary>Si el espectador se sale de la web</summary>
+        <div class="acc-b"><p>Que te diga el año en voz alta y recíbelo de tres formas:</p><ul><li><b>Voz:</b> activa «Voz» en Entrada y deja que lo escuche.</li><li><b>Gestos:</b> con la pantalla negra o con la cruceta del mando, teclea los 4 dígitos con deslizamientos.</li><li><b>Teclado:</b> los botones numéricos de Inicio.</li></ul></div></details>
+      <details class="acc"><summary>Tabla de gestos actual</summary><div class="acc-b" id="helpGest"></div></details>
+      <details class="acc"><summary>Reloj, auriculares y mando</summary>
+        <div class="acc-b"><ul><li><b>Reloj (Samsung / Apple):</b> activa «Avisar al reloj», instala la app <b>ntfy</b> en el móvil y suscríbete al tema que aparece en Entrada. La notificación llega sola al reloj.</li><li><b>Auriculares:</b> conecta por Bluetooth y activa «Voz».</li><li><b>Mando 8BitDo Zero2:</b> modo teclado; cruceta = ↑ ↓ ← →. Puedes reasignar botones en Entrada.</li></ul></div></details>
+      <details class="acc"><summary>Algo no funciona</summary>
+        <div class="acc-b"><ul><li><b>No llega nada:</b> comprueba la señal de internet y que la <em>clave</em> sea la misma (Ajustes). El punto verde de arriba debe estar encendido.</li><li><b>La voz no reconoce:</b> permite el micrófono y habla pausado: «mil setecientos cincuenta y nueve».</li><li><b>No vibra:</b> en iPhone la vibración web no existe; usa voz o reloj.</li><li><b>Sin internet:</b> voz, gestos, mando y teclado siguen funcionando; solo la entrada «Web» necesita conexión.</li></ul></div></details>
+    </section>
+  </main>
+
+  <div id="gestPad" class="gestpad"><div class="gp-dots" id="gpDots"></div><div class="gp-hint" id="gpHint">Gestos activos · desliza ↑ ↓ ← →</div><div class="gp-seq" id="gpSeq"></div></div>
+
+  <nav class="nav" id="nav">
+    <button data-go="home" class="on"><svg><use href="#i-home"/></svg><span>Inicio</span></button>
+    <button data-go="input"><svg><use href="#i-tune"/></svg><span>Entrada</span></button>
+    <button data-go="gest"><svg><use href="#i-touch"/></svg><span>Gestos</span></button>
+    <button data-go="set"><svg><use href="#i-gear"/></svg><span>Ajustes</span></button>
+    <button data-go="help"><svg><use href="#i-help"/></svg><span>Ayuda</span></button>
+  </nav>
 </div>
-<div id="gest"><u>gestos activos</u></div>
+
+<!-- Editor de gesto -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sh-b" role="dialog" aria-modal="true" aria-labelledby="shT">
+    <div class="sh-h"><b id="shT">Nuevo gesto</b><button class="x" id="shX" aria-label="Cerrar">✕</button></div>
+    <p class="muted">1 · Dibuja el gesto: desliza en el recuadro, usa la cruceta del mando o toca las flechas.</p>
+    <div class="cap" id="cap"><div class="cap-seq" id="capSeq"><span class="muted">Desliza aquí…</span></div></div>
+    <div class="arrows"><button data-d="U"><svg><use href="#i-U"/></svg></button><button data-d="L"><svg><use href="#i-L"/></svg></button><button data-d="D"><svg><use href="#i-D"/></svg></button><button data-d="R"><svg><use href="#i-R"/></svg></button><button data-d="x" class="del">Borrar</button></div>
+    <p class="muted">2 · ¿Qué debe hacer?</p>
+    <div class="acts" id="acts"></div>
+    <div class="msg" id="shMsg"></div>
+    <div class="row2"><button class="btn primary" id="shSave">Guardar</button><button class="btn danger" id="shDel" hidden>Eliminar</button></div>
+  </div>
+</div>
+<div id="dlg" class="sheet" hidden><div class="sh-b small"><p id="dlgMsg"></p><div class="row2"><button class="btn" id="dlgNo">Cancelar</button><button class="btn danger" id="dlgYes">Aceptar</button></div></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="shared.js"></script>
+<script src="qr.js"></script>
 <script src="receiver.js"></script>
 </body>
 </html>

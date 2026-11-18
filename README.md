@@ -1,5 +1,7 @@
 # Calendario mental
 
+> **Versión principal: carpeta `neocities/`** (estático, sin servidor; transporte ntfy.sh) + `android/` (APK del receptor). Las carpetas `public/` + `server.js` son la variante con servidor Node/WebSocket (no incluye los últimos cambios de diseño y gestos).
+
 Tres piezas conectadas por WebSocket:
 
 | Pieza | URL | Quién la usa |

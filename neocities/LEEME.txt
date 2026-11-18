@@ -1,9 +1,15 @@
 CALENDARIO MENTAL - versión Neocities (sin servidor)
 
-1) Sube TODO el contenido de esta carpeta a la raíz de tu sitio Neocities (arrastra los archivos al panel).
-2) MENTALISTA: abre  https://TUSITIO.neocities.org/r.html  -> toca "Toca para iniciar" -> Modos -> "Enlace espectador".
-   Ese enlace lleva tu clave secreta (?k=...). Úsalo para el QR / NFC.
-3) ESPECTADOR: abre el enlace (index.html?k=TUCLAVE), escribe "calendario de 1890" y listo.
-4) Reloj: activa "Notificar al reloj" y suscríbete en la app ntfy (Android) al tema que muestra el panel (termina en -w).
+SUBIR
+1) Sube TODO el contenido de esta carpeta a la raíz de tu sitio Neocities.
+2) (Opcional) Sube un archivo "logo.png" (tu propio logotipo) junto a index.html: sustituye al texto "Buscador" de la página de inicio.
 
-Transporte en tiempo real: tema secreto en ntfy.sh (gratis, sin cuenta). Límite aprox. de mensajes por IP; para uso intensivo usa tu propio servidor ntfy o el servidor Node del repositorio.
+USAR
+- MENTALISTA: abre https://TUSITIO.neocities.org/r.html -> "Empezar".
+  En "Ajustes" copia el enlace del espectador o muestra su QR (sirve también para una etiqueta NFC).
+- ESPECTADOR: abre el enlace, escribe "calendario de 1890", toca una de las miniaturas o resultados y se abre el calendario.
+  El código llega al mentalista en cuanto se escribe el año.
+- Gestos: pestaña "Gestos" (crear, editar, eliminar). Sirven igual con la cruceta del mando.
+- La pestaña "Ayuda" del receptor trae las instrucciones y la fórmula.
+
+TRANSPORTE: tema secreto en ntfy.sh (gratis, sin cuenta). Límite público aprox.: 250 mensajes/día por IP que publica.
