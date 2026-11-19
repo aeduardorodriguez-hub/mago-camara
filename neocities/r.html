@@ -54,7 +54,8 @@
       <div class="hero" id="hero" hidden>
         <div class="who" id="who"></div>
         <div class="code" id="code">·</div>
-        <div class="yr"><span id="yr"></span><span class="leap" id="leap" hidden>Bisiesto</span></div>
+        <div class="yr"><span id="yr"></span></div>
+        <div class="leap" id="leap" hidden>BISIESTO</div>
       </div>
       <div class="empty card" id="empty">
         <div class="pulse"><i></i><i></i><i></i></div>
@@ -125,8 +126,9 @@
       <h2 class="sec">Sala</h2>
       <div class="card">
         <div class="fld"><span>Clave secreta</span><div class="keyshow"><code id="keyshow"></code></div></div>
+        <label class="fld"><span>Servidor de mensajes (avanzado)</span><input id="srvIn" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://ntfy.sh (por defecto)"></label>
         <div class="row2"><button class="btn" id="newkey">Clave nueva</button><button class="btn" id="clear">Borrar historial</button></div>
-        <small class="muted">Receptor y espectadores deben compartir la misma clave. Si la cambias, usa el enlace nuevo.</small>
+        <small class="muted">Receptor y espectadores deben compartir la misma clave. Si la cambias, usa el enlace nuevo. El servidor público ntfy.sh admite unos 250 mensajes al día por conexión a internet; para shows grandes usa un servidor ntfy propio (gratuito) y escríbelo aquí: el enlace y el QR lo incluirán.</small>
       </div>
     </section>
 

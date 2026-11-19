@@ -4,7 +4,10 @@
   const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-  const isApp = !!window.AndroidApp, W = MC.CODE_WORDS, NTFY = 'https://ntfy.sh/';
+  const isApp = !!window.AndroidApp, W = MC.CODE_WORDS;
+  const srvOk = (v) => /^(https:\/\/|http:\/\/localhost)/i.test(v);
+  const srvVal = () => store.get('rx_srv', '').trim();
+  const NTFY = (srvOk(srvVal()) ? srvVal() : 'https://ntfy.sh').replace(/\/?$/, '/');
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
   // ---------- ajustes ----------
@@ -23,7 +26,7 @@
   function linkFor() {
     let s = siteVal().trim(); if (!/^https?:\/\//i.test(s)) return '';
     s = /\.html?$/i.test(s) ? s.replace(/[^/]*$/, '') : s.replace(/\/?$/, '/');
-    try { return new URL('index.html?k=' + key, s).href; } catch { return ''; }
+    try { return new URL('index.html?k=' + key + (srvOk(srvVal()) ? '&s=' + encodeURIComponent(srvVal()) : ''), s).href; } catch { return ''; }
   }
 
   // ---------- utilidades de interfaz ----------
@@ -303,6 +306,8 @@
     const q = $('#qr'); q.classList.toggle('on', !!l);
     if (l) { try { const c = qrcode(0, 'M'); c.addData(l); c.make(); q.innerHTML = c.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); } catch { q.classList.remove('on'); } }
   }
+  $('#srvIn').value = srvVal();
+  $('#srvIn').addEventListener('change', (e) => { const v = e.target.value.trim(); if (v && !srvOk(v)) { toast('La dirección debe empezar por https://'); return; } store.set('rx_srv', v); toast('Servidor guardado: reiniciando…'); setTimeout(() => location.reload(), 700); });
   $('#siteIn').value = store.get('rx_site', '') || (isApp ? '' : siteVal());
   $('#siteIn').addEventListener('input', (e) => { let v = e.target.value.trim(); if (v && !/^https?:\/\//i.test(v) && v.includes('.')) v = 'https://' + v; store.set('rx_site', v); drawLink(); });
   $('#shareBtn').onclick = async () => { const l = linkFor(); if (!l) return toast('Primero escribe la dirección de tu sitio'); if (navigator.share) { try { await navigator.share({ title: 'Calendario', url: l }); return; } catch {} } toast((await copyText(l)) ? 'Enlace copiado' : 'No se pudo copiar'); };
