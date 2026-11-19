@@ -11,7 +11,7 @@
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
   // ---------- ajustes ----------
-  const DEF = { web: 1, voice: 0, pad: 1, gest: 0, speak: 1, seat: 1, vib: 1, dim: 0, watch: 0, autosend: 1 };
+  const DEF = { web: 1, voice: 0, pad: 1, gest: 0, speak: 1, seat: 1, vib: 1, dim: 0, watch: 0, autosend: 1, askname: 0 };
   const S = {}; for (const k in DEF) S[k] = store.get('rx_' + k, String(DEF[k])) === '1';
   S.gap = +store.get('rx_gap', '650') || 650; S.sens = +store.get('rx_sens', '30') || 30; S.clearSec = +store.get('rx_clearSec', '6');
   const saveS = () => { for (const k in DEF) store.set('rx_' + k, S[k] ? '1' : '0'); store.set('rx_gap', S.gap); store.set('rx_sens', S.sens); store.set('rx_clearSec', S.clearSec); };
@@ -26,7 +26,7 @@
   function linkFor() {
     let s = siteVal().trim(); if (!/^https?:\/\//i.test(s)) return '';
     s = /\.html?$/i.test(s) ? s.replace(/[^/]*$/, '') : s.replace(/\/?$/, '/');
-    try { return new URL('index.html?k=' + key + (srvOk(srvVal()) ? '&s=' + encodeURIComponent(srvVal()) : ''), s).href; } catch { return ''; }
+    try { return new URL('index.html?k=' + key + (srvOk(srvVal()) ? '&s=' + encodeURIComponent(srvVal()) : '') + (S.askname ? '&n=1' : ''), s).href; } catch { return ''; }
   }
 
   // ---------- utilidades de interfaz ----------
@@ -44,22 +44,41 @@
   // ---------- salida ----------
   const board = new Map(); let cur = null;
   const LBL = { voz: 'Entrada por voz', gesto: 'Entrada por gestos', manual: 'Entrada manual', prueba: 'Prueba' };
+  // Espectadores: número por orden de llegada (ESP 1, ESP 2…), editable; el nombre es opcional
+  let seats = {}, names = {};
+  try { seats = JSON.parse(store.get('rx_seats', '{}')) || {}; } catch {}
+  try { names = JSON.parse(store.get('rx_names', '{}')) || {}; } catch {}
+  const saveSeats = () => { store.set('rx_seats', JSON.stringify(seats)); store.set('rx_names', JSON.stringify(names)); };
+  const seatOf = (sid) => { if (!seats[sid]) { seats[sid] = Math.max(0, ...Object.values(seats)) + 1; saveSeats(); } return seats[sid]; };
+  const seatNum = (e) => (e.sid ? seats[e.sid] || e.seat || 0 : 0);
+  const pname = (e) => (e.sid && names[e.sid]) || e.pname || '';
+  const whoTxt = (e) => (seatNum(e) ? 'ESP ' + seatNum(e) : (LBL[e.label] || e.label));
+  const subTxt = (e) => (seatNum(e) ? (pname(e) || e.label || '') : '');
+  const keyOf = (e) => (e.sid ? 'w' + e.sid : 'x' + e.label);
   function showEv(ev, fresh) {
     $('#hero').hidden = false; $('#empty').hidden = true;
-    $('#who').textContent = ev.seat ? `Persona ${ev.seat}${ev.label ? ' · ' + ev.label : ''}` : (LBL[ev.label] || ev.label);
+    $('#who').textContent = whoTxt(ev) + (subTxt(ev) ? ' · ' + subTxt(ev) : '');
     $('#code').textContent = ev.code; $('#yr').textContent = ev.year; $('#leap').hidden = !ev.leap;
     const h = $('#hero'); h.classList.remove('pop'); void h.offsetWidth; if (fresh) h.classList.add('pop');
-    board.set(ev.seat ? 's' + ev.seat : 'x' + ev.label, ev);
-    drawBoard(fresh ? ev : null);
+    board.set(keyOf(ev), ev); drawBoard(fresh ? ev : null); drawLast(ev);
+  }
+  // franja fija con el último resultado (visible en todas las pestañas y sobre la pantalla de gestos)
+  function drawLast(ev) {
+    const html = `<b>${esc(whoTxt(ev))}</b><span>${ev.year}</span><strong>${ev.code}</strong>${ev.leap ? '<em>BISIESTO</em>' : ''}`;
+    $('#lastRow').hidden = false; $('#lastRow').innerHTML = html; $('#gpRes').innerHTML = html;
   }
   function drawBoard(hl) {
-    const rows = [...board.entries()].sort((a, b) => b[1].ts - a[1].ts).slice(0, 14);
-    $('#board').innerHTML = rows.map(([k, e]) => `<div class="person${e === hl ? ' new' : ''}" data-k="${k}"><div class="av">${e.seat || '·'}</div><div class="pi"><b>${e.seat ? 'Persona ' + e.seat : esc(LBL[e.label] || e.label)}</b><span>${e.year}${e.seat && e.label ? ' · ' + esc(e.label) : ''}</span></div>${e.leap ? '<span class="pb">BISIESTO</span>' : ''}<div class="pc">${e.code}</div></div>`).join('');
-    $('#empty').hidden = board.size > 0; if (!board.size) $('#hero').hidden = true;
+    const all = [...board.entries()];
+    const web = all.filter(([, e]) => e.sid).sort((a, b) => seatNum(a[1]) - seatNum(b[1]));
+    const loc = all.filter(([, e]) => !e.sid).sort((a, b) => b[1].ts - a[1].ts);
+    const row = ([k, e]) => `<div class="person${e === hl ? ' new' : ''}" data-k="${esc(k)}"><div class="av">${seatNum(e) || '·'}</div><div class="pi"><b>${esc(whoTxt(e))}</b><span>${esc(subTxt(e))}</span></div><div class="py">${e.year}</div>${e.leap ? '<span class="pb">BISIESTO</span>' : ''}<div class="pc">${e.code}</div>${e.sid ? `<button class="icb ed" data-edit="${esc(e.sid)}" aria-label="Editar espectador"><svg><use href="#i-edit"/></svg></button>` : ''}</div>`;
+    $('#board').innerHTML = [...web, ...loc].map(row).join('');
+    $('#boardHead').hidden = !board.size; $('#empty').hidden = board.size > 0;
+    if (!board.size) { $('#hero').hidden = true; $('#lastRow').hidden = true; }
   }
   function speak(ev) {
     if (!S.speak || !('speechSynthesis' in window)) return;
-    const txt = `${S.seat && ev.seat ? 'Persona ' + ev.seat + '. ' : ''}${W[ev.code]}${ev.leap ? '. Bisiesto' : ''}`;
+    const txt = `${S.seat && seatNum(ev) ? 'Espectador ' + seatNum(ev) + '. ' : ''}${W[ev.code]}${ev.leap ? '. Bisiesto' : ''}`;
     try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; u.rate = 1.15; speechSynthesis.speak(u); } catch {}
   }
   function vibrate(ev) {
@@ -75,7 +94,6 @@
   }
 
   // ---------- red: ntfy.sh por SSE ----------
-  const seatOf = (() => { let m = {}; try { m = JSON.parse(store.get('rx_seats', '{}')); } catch {} return (sid) => { if (!m[sid]) { m[sid] = Object.keys(m).length + 1; store.set('rx_seats', JSON.stringify(m)); } return m[sid]; }; })();
   const seen = new Set(); let es = null, lastT = Math.floor(Date.now() / 1000) - 90;
   function mirror(i, seat) {
     if (!S.watch) return;
@@ -93,8 +111,8 @@
       if (m.time) lastT = Math.max(lastT, m.time);
       let p; try { p = JSON.parse(m.message); } catch { return; }
       const i = MC.info(p.y); if (!i || !S.web || typeof p.s !== 'string') return;
-      const seat = seatOf(p.s.slice(0, 12)), old = Date.now() / 1000 - (m.time || 0) > 30;
-      deliver({ seat, label: String(p.l || '').slice(0, 12), ...i, ts: (m.time || Date.now() / 1000) * 1000, src: 'web' }, { silent: old });
+      const sid = p.s.slice(0, 12), seat = seatOf(sid), old = Date.now() / 1000 - (m.time || 0) > 30;
+      deliver({ sid, seat, pname: String(p.n || '').replace(/[<>&"]/g, '').slice(0, 20), label: String(p.l || '').slice(0, 12), ...i, ts: (m.time || Date.now() / 1000) * 1000, src: 'web' }, { silent: old });
       if (!old) mirror(i, seat);
     };
   }
@@ -144,7 +162,7 @@
   $('#kBack').onclick = () => A.back(); $('#kReplay').onclick = () => A.replay();
 
   // ---------- gestos: lista editable + motor ----------
-  const DEF_G = [['UU', 'd1'], ['UR', 'd2'], ['UD', 'd3'], ['UL', 'd4'], ['RU', 'd5'], ['RR', 'd6'], ['RD', 'd7'], ['RL', 'd8'], ['DU', 'd9'], ['DR', 'd0'], ['DD', 'back'], ['DL', 'clear'], ['LU', 'replay'], ['LR', 'dim'], ['LD', 'send']];
+  const DEF_G = [['UU', 'd1'], ['UR', 'd2'], ['UD', 'd3'], ['UL', 'd4'], ['RU', 'd5'], ['RR', 'd6'], ['RD', 'd7'], ['RL', 'd8'], ['DU', 'd9'], ['DR', 'd0'], ['DD', 'back'], ['DL', 'clear'], ['LU', 'replay'], ['LD', 'send']];
   const defaults = () => DEF_G.map(([seq, act], i) => ({ id: 'g' + i, seq, act }));
   const okG = (g) => g && /^[UDLR]{1,5}$/.test(g.seq) && ACTS.includes(g.act);
   let G; try { const a = JSON.parse(store.get('rx_g2', 'null')); G = Array.isArray(a) && a.every(okG) ? a : defaults(); } catch { G = defaults(); }
@@ -311,10 +329,22 @@
   $('#siteIn').value = store.get('rx_site', '') || (isApp ? '' : siteVal());
   $('#siteIn').addEventListener('input', (e) => { let v = e.target.value.trim(); if (v && !/^https?:\/\//i.test(v) && v.includes('.')) v = 'https://' + v; store.set('rx_site', v); drawLink(); });
   $('#shareBtn').onclick = async () => { const l = linkFor(); if (!l) return toast('Primero escribe la dirección de tu sitio'); if (navigator.share) { try { await navigator.share({ title: 'Calendario', url: l }); return; } catch {} } toast((await copyText(l)) ? 'Enlace copiado' : 'No se pudo copiar'); };
-  $('#newkey').onclick = async () => { if (await ask('¿Crear una clave nueva? Los enlaces y QR anteriores dejarán de funcionar.', 'Crear')) { store.set('rx_key', rnd()); store.set('rx_seats', '{}'); location.reload(); } };
-  $('#clear').onclick = async () => { if (await ask('¿Borrar el historial de personas y códigos?', 'Borrar')) { board.clear(); drawBoard(null); $('#hero').hidden = true; toast('Historial borrado'); } };
+  $('#newkey').onclick = async () => { if (await ask('¿Crear una clave nueva? Los enlaces y QR anteriores dejarán de funcionar.', 'Crear')) { store.set('rx_key', rnd()); store.set('rx_seats', '{}'); store.set('rx_names', '{}'); location.reload(); } };
+  async function newRound() { if (await ask('¿Empezar una ronda nueva? Se borra la lista y la numeración ESP vuelve a 1.', 'Nueva ronda')) { seats = {}; names = {}; saveSeats(); board.clear(); cur = null; drawBoard(null); toast('Ronda nueva: el próximo en escribir será ESP 1'); } }
+  $('#clear').onclick = newRound; $('#newRound').onclick = newRound;
+  // editar un espectador: nombre y número (si el número ya está en uso, se intercambian)
+  let editSid = null;
+  function openPerson(sid) { editSid = sid; $('#pT').textContent = 'ESP ' + seats[sid]; $('#pName').value = names[sid] || ''; $('#pNum').value = seats[sid]; $('#psheet').hidden = false; }
+  const closePerson = () => { $('#psheet').hidden = true; editSid = null; };
+  $('#pX').onclick = $('#pNo').onclick = closePerson;
+  $('#pYes').onclick = () => {
+    const sid = editSid, n = Math.max(1, Math.min(99, parseInt($('#pNum').value, 10) || seats[sid])), nm = $('#pName').value.replace(/[<>&"]/g, '').trim().slice(0, 20);
+    if (nm) names[sid] = nm; else delete names[sid];
+    if (n !== seats[sid]) { const other = Object.keys(seats).find((k) => k !== sid && seats[k] === n); if (other) seats[other] = seats[sid]; seats[sid] = n; }
+    saveSeats(); closePerson(); drawBoard(null); if (cur && cur.sid) drawLast(cur); toast('Guardado');
+  };
   $('#testbtn').onclick = () => deliver({ seat: 1, label: 'prueba', ...MC.info(1759), ts: Date.now(), src: 'test' });
-  $('#board').addEventListener('click', (e) => { const r = e.target.closest('.person'), ev = r && board.get(r.dataset.k); if (ev) { cur = ev; showEv(ev, false); speak(ev); vibrate(ev); } });
+  $('#board').addEventListener('click', (e) => { const ed = e.target.closest('[data-edit]'); if (ed) return openPerson(ed.dataset.edit); const r = e.target.closest('.person'), ev = r && board.get(r.dataset.k); if (ev) { cur = ev; showEv(ev, false); speak(ev); vibrate(ev); } });
   document.addEventListener('click', async (e) => {
     const g = e.target.closest('[data-go]'); if (g) return go(g.dataset.go);
     if (e.target.closest('[data-act="copylink"]')) { const l = linkFor(); if (!l) { toast('Primero escribe la dirección de tu sitio'); go('set'); return; } toast((await copyText(l)) ? 'Enlace copiado' : 'No se pudo copiar'); }
@@ -335,7 +365,7 @@
     $('#wtopic').textContent = TOPIC + '-w'; $('#micState').textContent = S.voice ? '● Escuchando' : '';
     if (S.voice) voiceOn(); else voiceOff();
   }
-  $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
+  $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'askname') drawLink(); if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
 
   // ---------- inicio ----------
   function begin(t) {

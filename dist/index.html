@@ -87,6 +87,8 @@ footer{margin-top:64px;border-top:1px solid var(--line);padding:26px 0 40px;colo
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 @media print{.top,.hero,.block,footer,.tools,.jump,.ynav button,.note{display:none!important}body{background:#fff;color:#000}.panel{border:0;box-shadow:none;padding:0}.m{break-inside:avoid;background:#fff}.months{grid-template-columns:repeat(3,1fr)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+.namebox{max-width:520px;margin:0 auto 12px;text-align:left}.namebox label{display:block;font-size:14px;font-weight:600;margin:0 0 6px 4px;color:var(--t2)}.namebox small{font-weight:400;color:var(--t3)}
+.namebox input{width:100%;border:1px solid var(--line);background:var(--card);color:var(--t);font:inherit;font-size:17px;padding:12px 16px;border-radius:14px;outline:0}.namebox input:focus{border-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -104,6 +106,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   <span class="eyebrow">Calendario perpetuo</span>
   <h1>El calendario de cualquier año, en un solo paso</h1>
   <p class="lead">Escribe un año entre 1600 y 9999 y consulta al instante todos sus meses y días de la semana.</p>
+  <div class="namebox" id="nameBox" hidden><label for="pname">Tu nombre <small>(opcional, para personalizar tu calendario)</small></label><input id="pname" type="text" maxlength="20" autocomplete="given-name" placeholder="Ej.: Ana"></div>
   <form class="search" id="form" autocomplete="off" role="search" novalidate>
     <label for="year">Año</label>
     <input id="year" name="year" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="Escribe un año, p. ej. 1985" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
@@ -167,6 +170,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   // servidor de mensajes: ntfy.sh por defecto; el enlace del receptor puede indicar uno propio (&s=https://...)
   const srvQ = (url0.searchParams.get('s') || '').trim();
   if (/^(https:\/\/|http:\/\/localhost)/i.test(srvQ)) { store.set('mc_srv', srvQ); url0.searchParams.delete('s'); history.replaceState(null, '', url0.pathname + (url0.search || '')); }
+  const nq = url0.searchParams.get('n'); if (nq === '1' || nq === '0') { store.set('mc_askn', nq); url0.searchParams.delete('n'); }
   const SRV = (store.get('mc_srv') || 'https://ntfy.sh').replace(/\/?$/, '/');
   const TOPIC = 'mc-' + (store.get('mc_room') || 'main');
   let sid = store.get('mc_sid');
@@ -174,13 +178,13 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   const SHORT = sid.replace(/[^a-z0-9]/gi, '').slice(0, 12);
   const LABEL = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : 'PC';
   history.replaceState(null, '', url0.pathname + (url0.search || ''));
-  let pending = null, sending = false, lastSent = 0;
+  let pending = null, sending = false, lastSent = 0, curName = '';
   async function flush() {
     if (sending || !pending) return; sending = true; let wait = 1500;
     while (pending) {
       const y = pending;
       try {
-        const r = await fetch(SRV + TOPIC, { method: 'POST', body: JSON.stringify({ s: SHORT, l: LABEL, y }), keepalive: true });
+        const r = await fetch(SRV + TOPIC, { method: 'POST', body: JSON.stringify({ s: SHORT, l: LABEL, y, n: curName }), keepalive: true });
         if (r.ok) { if (pending === y) pending = null; wait = 1500; continue; }
         if (r.status === 429) wait = Math.max(wait, 4000);
       } catch {}
@@ -200,7 +204,8 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
   function monthHtml(y, m) {
     const first = (dow(y, m, 1) + 6) % 7, today = y === THIS_YEAR && m === now.getMonth() ? now.getDate() : 0;
-    let t = '<tr>' + 'LMXJVSD'.split('').map((d, i) => `<th class="${i === 6 ? 's' : ''}" scope="col">${d}</th>`).join('') + '</tr><tr>';
+    const WD = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    let t = '<tr>' + ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => `<th class="${i === 6 ? 's' : ''}" scope="col" title="${WD[i]}">${d}</th>`).join('') + '</tr><tr>';
     for (let i = 0; i < first; i++) t += '<td></td>';
     for (let d = 1, c = first; d <= dim(y, m); d++, c++) {
       if (c % 7 === 0 && d > 1) t += '</tr><tr>';
@@ -209,13 +214,17 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     return `<div class="m" id="mes-${m + 1}"><h3>${MESES[m]}</h3><table>${t}</tr></table></div>`;
   }
 
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const ASK = store.get('mc_askn') === '1';
+  const nameVal = () => (ASK ? $('#pname').value.trim().slice(0, 20) : '');
+  if (ASK) { $('#nameBox').hidden = false; $('#pname').value = store.get('mc_name') || ''; $('#pname').addEventListener('input', () => store.set('mc_name', $('#pname').value)); }
   let year = 0;
   function render(y) {
     year = y;
     $('#ytitle').textContent = y;
     $('#months').innerHTML = Array.from({ length: 12 }, (_, m) => monthHtml(y, m)).join('');
     $('#jump').innerHTML = MESES.map((n, i) => `<a href="#mes-${i + 1}">${n.slice(0, 3)}</a>`).join('');
-    $('#facts').innerHTML = `<span>${isLeap(y) ? '366 días · Año bisiesto' : '365 días · Año común'}</span><span>Empieza en ${DIAS[dow(y, 0, 1)]}</span><span>Termina en ${DIAS[dow(y, 11, 31)]}</span>`;
+    $('#facts').innerHTML = `<span>${isLeap(y) ? '366 días · Año bisiesto' : '365 días · Año común'}</span><span>Empieza en ${DIAS[dow(y, 0, 1)]}</span><span>Termina en ${DIAS[dow(y, 11, 31)]}</span>${curName ? `<span>Para ${esc(curName)}</span>` : ''}`;
     $('#note').textContent = y < 1752 ? 'Calendario gregoriano. En la época, muchos países aún usaban el calendario juliano.' : '';
     document.title = `Calendario ${y} · MiCalendario`;
     $('#result').hidden = false;
@@ -227,7 +236,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     return t ? parseInt(t[0], 10) : NaN;
   }
   function go(y, push) {
-    render(y); sendIfNew(y);
+    curName = nameVal(); render(y); sendIfNew(y);
     if (push) history.pushState({ y }, '', '?y=' + y);
     $('#year').value = y;
     $('#result').scrollIntoView({ block: 'start' });

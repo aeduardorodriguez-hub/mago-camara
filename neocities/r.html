@@ -47,6 +47,7 @@
     <div class="ttl"><span class="logo-dot"></span><b id="barTitle">Inicio</b></div>
     <div class="chip" id="status"><i id="dot"></i><span id="pres">Conectando…</span></div>
   </header>
+  <div class="lastrow" id="lastRow" hidden></div>
 
   <main id="main">
     <!-- ============ INICIO ============ -->
@@ -68,6 +69,7 @@
         </ol>
         <div class="row2"><button class="btn primary" data-act="copylink"><svg><use href="#i-copy"/></svg>Copiar enlace</button><button class="btn" data-go="set">Ver QR</button></div>
       </div>
+      <div class="bhead" id="boardHead" hidden><b>Espectadores</b><button class="btn sm" id="newRound">Nueva ronda</button></div>
       <div id="board" class="board"></div>
       <div class="card keycard">
         <div class="kc-h"><b>Introducir año a mano</b><span class="muted">Si el espectador se sale de la web</span></div>
@@ -118,6 +120,7 @@
       <h2 class="sec">Enlace para el espectador</h2>
       <div class="card">
         <label class="fld"><span>Dirección de tu sitio</span><input id="siteIn" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://tusitio.neocities.org/"></label>
+        <label class="mode sm"><span class="mt"><b>Pedir nombre al espectador</b><small>Opcional: la página le pregunta su nombre y aparece junto a su número.</small></span><input type="checkbox" class="sw" data-k="askname"></label>
         <div class="linkbox" id="linkBox"></div>
         <div class="row2"><button class="btn primary" data-act="copylink"><svg><use href="#i-copy"/></svg>Copiar</button><button class="btn" id="shareBtn"><svg><use href="#i-share"/></svg>Compartir</button></div>
         <div class="qr" id="qr"></div>
@@ -127,7 +130,7 @@
       <div class="card">
         <div class="fld"><span>Clave secreta</span><div class="keyshow"><code id="keyshow"></code></div></div>
         <label class="fld"><span>Servidor de mensajes (avanzado)</span><input id="srvIn" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://ntfy.sh (por defecto)"></label>
-        <div class="row2"><button class="btn" id="newkey">Clave nueva</button><button class="btn" id="clear">Borrar historial</button></div>
+        <div class="row2"><button class="btn" id="newkey">Clave nueva</button><button class="btn" id="clear">Nueva ronda</button></div>
         <small class="muted">Receptor y espectadores deben compartir la misma clave. Si la cambias, usa el enlace nuevo. El servidor público ntfy.sh admite unos 250 mensajes al día por conexión a internet; para shows grandes usa un servidor ntfy propio (gratuito) y escríbelo aquí: el enlace y el QR lo incluirán.</small>
       </div>
     </section>
@@ -149,7 +152,11 @@
         <p class="warn"><b>Bisiesto:</b> cuando el receptor muestre «Bisiesto», resta 1 <u>solo si la fecha es de enero o febrero</u>. De marzo a diciembre no se resta.</p>
         <p class="muted">Ejemplo: 14 de julio de 1904 → código 6 (bisiesto, pero es julio, no se resta). 14 + 5 + 6 = 25 → 25 ÷ 7 = 3 resto 4 → <b>jueves</b>.</p></div></details>
       <details class="acc"><summary>Qué muestra el receptor</summary>
-        <div class="acc-b"><p>El <b>número grande</b> es el código del año (0 a 6). Debajo, el año y, solo si lo es, la etiqueta <span class="leap inl">Bisiesto</span>. Con varios espectadores aparece una tarjeta por persona; toca una para repetir su código por voz y vibración.</p></div></details>
+        <div class="acc-b"><p>El <b>número grande</b> es el código del año (0 a 6). Debajo, el año y, <u>solo si lo es</u>, la palabra <span class="leap inl">BISIESTO</span>. La franja de arriba repite siempre el último resultado, en cualquier pestaña y también con la pantalla de gestos.</p></div></details>
+      <details class="acc"><summary>Varios espectadores (rutina con 5 personas)</summary>
+        <div class="acc-b"><p>Cada persona recibe un número <b>ESP 1, ESP 2…</b> por <b>orden de llegada</b>: el primero en escribir un año es el ESP 1. La lista muestra <em>ESP · año · código</em>, ordenada por número.</p>
+        <ol><li>Antes de empezar toca <b>Nueva ronda</b> en Inicio.</li><li>Pídeles que busquen <b>por turnos</b>, en el orden en que están sentados: «tú primero, ahora tú…». Así ESP 1 es la primera persona, ESP 2 la segunda, etc.</li><li>Si dos entran a la vez, toca el lápiz de una tarjeta y <b>cambia el número</b> (se intercambia con el otro) o ponle su <b>nombre</b>.</li><li>Opción más segura: en Ajustes activa <b>Pedir nombre al espectador</b>; verás «ESP 2 · Ana».</li><li>El dispositivo (iPhone/Android) también aparece junto al número.</li></ol>
+        <p class="muted">Si la misma persona repite con otro año, su tarjeta se actualiza y conserva su número.</p></div></details>
       <details class="acc"><summary>Vibración y voz</summary>
         <div class="acc-b"><p><b>Vibración:</b> tantos pulsos cortos como el código (3 = tres pulsos). Código 0 = un pulso largo. Si es bisiesto, al final hay una pausa y un pulso largo extra.</p><p><b>Voz:</b> con auriculares dice «Persona 2. Cuatro. Bisiesto».</p></div></details>
       <details class="acc"><summary>Si el espectador se sale de la web</summary>
@@ -160,9 +167,9 @@
       <details class="acc"><summary>Algo no funciona</summary>
         <div class="acc-b"><ul><li><b>No llega nada:</b> comprueba la señal de internet y que la <em>clave</em> sea la misma (Ajustes). El punto verde de arriba debe estar encendido.</li><li><b>La voz no reconoce:</b> permite el micrófono y habla pausado: «mil setecientos cincuenta y nueve».</li><li><b>No vibra:</b> en iPhone la vibración web no existe; usa voz o reloj.</li><li><b>Sin internet:</b> voz, gestos, mando y teclado siguen funcionando; solo la entrada «Web» necesita conexión.</li></ul></div></details>
     </section>
+  <div id="gestPad" class="gestpad"><div class="gp-res" id="gpRes"></div><div class="gp-dots" id="gpDots"></div><div class="gp-hint" id="gpHint">Gestos activos · desliza ↑ ↓ ← →</div><div class="gp-digits" id="gpDigits"></div><div class="gp-seq" id="gpSeq"></div></div>
   </main>
 
-  <div id="gestPad" class="gestpad"><div class="gp-dots" id="gpDots"></div><div class="gp-hint" id="gpHint">Gestos activos · desliza ↑ ↓ ← →</div><div class="gp-digits" id="gpDigits"></div><div class="gp-seq" id="gpSeq"></div></div>
 
   <nav class="nav" id="nav">
     <button data-go="home" class="on"><svg><use href="#i-home"/></svg><span>Inicio</span></button>
@@ -186,6 +193,12 @@
     <div class="row2"><button class="btn primary" id="shSave">Guardar</button><button class="btn danger" id="shDel" hidden>Eliminar</button></div>
   </div>
 </div>
+<div id="psheet" class="sheet" hidden><div class="sh-b small">
+  <div class="sh-h"><b id="pT">Espectador</b><button class="x" id="pX" aria-label="Cerrar">✕</button></div>
+  <label class="fld"><span>Nombre (opcional)</span><input id="pName" type="text" maxlength="20" placeholder="Ej.: Ana" autocomplete="off"></label>
+  <label class="fld"><span>Número (ESP)</span><input id="pNum" type="number" min="1" max="99" inputmode="numeric"></label>
+  <div class="row2"><button class="btn" id="pNo">Cancelar</button><button class="btn primary" id="pYes">Guardar</button></div>
+</div></div>
 <div id="dlg" class="sheet" hidden><div class="sh-b small"><p id="dlgMsg"></p><div class="row2"><button class="btn" id="dlgNo">Cancelar</button><button class="btn danger" id="dlgYes">Aceptar</button></div></div></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="shared.js"></script>

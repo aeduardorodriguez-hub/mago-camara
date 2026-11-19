@@ -20,3 +20,10 @@ MENSAJES
 
 MANDO / GESTOS
 - Entrada > Mando: "Asignar la cruceta paso a paso". Gestos > "Monitor de entrada" muestra lo que se recibe.
+
+VARIOS ESPECTADORES (rutina con 5 personas)
+- Cada persona recibe ESP 1, ESP 2... por ORDEN DE LLEGADA (el primero en escribir un año es ESP 1). La lista muestra ESP · año · código.
+- Antes de empezar toca "Nueva ronda". Pídeles que busquen POR TURNOS, en el orden en que están sentados.
+- Si dos entran a la vez: lápiz de la tarjeta -> cambiar número (se intercambia) o poner nombre.
+- Opción más segura: Ajustes > "Pedir nombre al espectador"; verás "ESP 2 · Ana".
+- La franja superior del receptor muestra siempre el último resultado, también con la pantalla de gestos.
