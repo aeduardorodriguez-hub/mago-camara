@@ -27,3 +27,15 @@ VARIOS ESPECTADORES (rutina con 5 personas)
 - Si dos entran a la vez: lápiz de la tarjeta -> cambiar número (se intercambia) o poner nombre.
 - Opción más segura: Ajustes > "Pedir nombre al espectador"; verás "ESP 2 · Ana".
 - La franja superior del receptor muestra siempre el último resultado, también con la pantalla de gestos.
+
+RESPALDO DE EMERGENCIA (si falla internet o el espectador se sale de la página)
+- El botón "Respaldo" (arriba) está siempre disponible y se pone rojo si se pierde la conexión.
+- El año tecleado / dicho ("Decir el año": una sola escucha) / hecho con gestos o con la cruceta del mando se guarda en el número ESP de "destino" (avanza solo al siguiente libre; ‹ › para corregir otro).
+- No interfiere con la web: gana siempre el dato MÁS RECIENTE; un aviso viejo que llegue tarde no pisa lo que escribiste.
+- La cruceta del mando está siempre lista; la pantalla de gestos y la voz se activan desde el Respaldo.
+
+RELOJ INTELIGENTE (redondo o cuadrado)
+- En pantallas pequeñas la app cambia sola a una vista compacta: 1 espectador en grande (código, año, BISIESTO) o hasta 5 en lista (ESP · año · código · B). Toque = alternar; pulsación larga = ronda nueva; deslizar = gestos de respaldo.
+- Ajustes > Pantalla: Automática / Teléfono / Reloj redondo / Reloj cuadrado (también ?form=round en la dirección).
+- La CLAVE debe ser la misma que en el teléfono: ahora se puede editar en Ajustes (usa una corta que puedas escribir en el reloj) y la primera pantalla del reloj tiene un campo para escribirla.
+- Galaxy Watch: instala el APK por ADB inalámbrico. Alternativa: app ntfy (Entrada > Avisar al reloj).

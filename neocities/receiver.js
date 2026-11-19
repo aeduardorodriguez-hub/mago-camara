@@ -20,6 +20,7 @@
   const rnd = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), (b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
   const urlKey = (new URL(location.href).searchParams.get('k') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
   const key = urlKey || store.get('rx_key', '') || rnd(); store.set('rx_key', key);
+  { const fq = new URL(location.href).searchParams.get('form'); if (['auto', 'phone', 'round', 'square'].includes(fq)) store.set('rx_form', fq); }
   if (urlKey && !isApp) history.replaceState(null, '', location.pathname);
   const TOPIC = 'mc-' + key;
   const siteVal = () => store.get('rx_site', '') || (isApp ? '' : new URL('./', location.href).href);
@@ -43,6 +44,7 @@
 
   // ---------- salida ----------
   const board = new Map(); let cur = null;
+  let wmode = 'auto';   // vista de reloj: auto | hero | list
   const LBL = { voz: 'Entrada por voz', gesto: 'Entrada por gestos', manual: 'Entrada manual', prueba: 'Prueba' };
   // Espectadores: número por orden de llegada (ESP 1, ESP 2…), editable; el nombre es opcional
   let seats = {}, names = {};
@@ -53,14 +55,28 @@
   const seatNum = (e) => (e.sid ? seats[e.sid] || e.seat || 0 : 0);
   const pname = (e) => (e.sid && names[e.sid]) || e.pname || '';
   const whoTxt = (e) => (seatNum(e) ? 'ESP ' + seatNum(e) : (LBL[e.label] || e.label));
-  const subTxt = (e) => (seatNum(e) ? (pname(e) || e.label || '') : '');
+  const subTxt = (e) => (seatNum(e) ? (e.src === 'manual' ? [pname(e), e.label].filter(Boolean).join(' · ') : (pname(e) || e.label || '')) : '');
   const keyOf = (e) => (e.sid ? 'w' + e.sid : 'x' + e.label);
+  // Respaldo: el año tecleado/dicho/por gestos se guarda en el número ESP de "destino" sin tocar a los demás
+  function sidForSeat(n) {
+    const f = Object.keys(seats).find((k) => seats[k] === n); if (f) return f;
+    let k = 'm' + n; while (seats[k] !== undefined) k += 'x'; seats[k] = n; saveSeats(); return k;
+  }
+  let target = 0;
+  const nextFree = () => { const used = new Set([...board.values()].map(seatNum)); let n = 1; while (used.has(n)) n++; return n; };
+  const curTarget = () => target || nextFree();
+  function setTarget(n) { target = Math.max(1, Math.min(20, n)); drawTarget(); }
+  function drawTarget() {
+    const t = curTarget(), ex = [...board.values()].find((e) => seatNum(e) === t);
+    $('#tgtNum').textContent = 'ESP ' + t; $('#tgtSub').textContent = ex ? `ya tiene ${ex.year} · se reemplazará` : 'libre';
+    drawWatch();
+  }
   function showEv(ev, fresh) {
     $('#hero').hidden = false; $('#empty').hidden = true;
     $('#who').textContent = whoTxt(ev) + (subTxt(ev) ? ' · ' + subTxt(ev) : '');
     $('#code').textContent = ev.code; $('#yr').textContent = ev.year; $('#leap').hidden = !ev.leap;
     const h = $('#hero'); h.classList.remove('pop'); void h.offsetWidth; if (fresh) h.classList.add('pop');
-    board.set(keyOf(ev), ev); drawBoard(fresh ? ev : null); drawLast(ev);
+    board.set(keyOf(ev), ev); drawBoard(fresh ? ev : null); drawLast(ev); drawTarget();
   }
   // franja fija con el último resultado (visible en todas las pestañas y sobre la pantalla de gestos)
   function drawLast(ev) {
@@ -75,6 +91,7 @@
     $('#board').innerHTML = [...web, ...loc].map(row).join('');
     $('#boardHead').hidden = !board.size; $('#empty').hidden = board.size > 0;
     if (!board.size) { $('#hero').hidden = true; $('#lastRow').hidden = true; }
+    drawWatch();
   }
   function speak(ev) {
     if (!S.speak || !('speechSynthesis' in window)) return;
@@ -86,11 +103,12 @@
     if (ev.code === 0) p.push(700); else for (let i = 0; i < ev.code; i++) p.push(120, 160);
     if (ev.leap) p.push(450, 400); buzz(p);
   }
-  function deliver(ev, o = {}) { cur = ev; showEv(ev, !o.silent); if (!o.silent) { speak(ev); vibrate(ev); } }
+  function deliver(ev, o = {}) { cur = ev; if (ev.src === 'web') wmode = 'auto'; showEv(ev, !o.silent); if (!o.silent) { speak(ev); vibrate(ev); } }
   function local(year, src) {
     const i = MC.info(year);
     if (!i) { toast(`${year} no está entre 1600 y 9999`); buzz([40, 40, 40]); return false; }
-    deliver({ seat: 0, label: src, ...i, ts: Date.now(), src }); mirror(i, 0); return true;
+    const n = curTarget(), sid = sidForSeat(n); target = 0;
+    deliver({ sid, seat: n, pname: '', label: src, ...i, ts: Date.now(), src: 'manual' }); mirror(i, n); return true;
   }
 
   // ---------- red: ntfy.sh por SSE ----------
@@ -99,7 +117,17 @@
     if (!S.watch) return;
     fetch(`${NTFY}${TOPIC}-w?title=${encodeURIComponent('#' + (seat || '-'))}&priority=5`, { method: 'POST', body: `${i.code}${i.leap ? ' B' : ''}` }).catch(() => {});
   }
-  const online = (on) => { $('#dot').classList.toggle('on', on); $('#pres').textContent = on ? 'En línea' : 'Reconectando…'; };
+  let offT = null;   // null = sin alerta pendiente · número = cuenta atrás · 'on' = alerta ya mostrada
+  const online = (on) => {
+    $('#dot').classList.toggle('on', on);
+    if (on) { if (typeof offT === 'number') clearTimeout(offT); offT = null; $('#bkBtn').classList.remove('alert'); $('#pres').textContent = 'En línea'; }
+    else {
+      if (offT === null) offT = setTimeout(() => { offT = 'on'; $('#bkBtn').classList.add('alert'); $('#pres').textContent = 'Sin conexión'; toast('Sin conexión: usa «Respaldo» si lo necesitas'); buzz([200, 100, 200]); drawWatch(); }, 6000);
+      if (offT !== 'on') $('#pres').textContent = 'Reconectando…';
+    }
+    drawWatch();
+  };
+
   function connect() {
     if (es) es.close();
     es = new EventSource(`${NTFY}${TOPIC}/sse?since=${lastT}`);
@@ -112,6 +140,7 @@
       let p; try { p = JSON.parse(m.message); } catch { return; }
       const i = MC.info(p.y); if (!i || !S.web || typeof p.s !== 'string') return;
       const sid = p.s.slice(0, 12), seat = seatOf(sid), old = Date.now() / 1000 - (m.time || 0) > 30;
+      const prevEv = board.get('w' + sid); if (prevEv && prevEv.ts > (m.time || Date.now() / 1000) * 1000) return;   // gana siempre el más reciente
       deliver({ sid, seat, pname: String(p.n || '').replace(/[<>&"]/g, '').slice(0, 20), label: String(p.l || '').slice(0, 12), ...i, ts: (m.time || Date.now() / 1000) * 1000, src: 'web' }, { silent: old });
       if (!old) mirror(i, seat);
     };
@@ -124,6 +153,7 @@
     $('#digits').innerHTML = d.map((x, n) => `<i class="${x ? 'f' : ''}${n === ix ? ' c' : ''}">${x || '–'}</i>`).join('');
     $('#gpDots').innerHTML = d.map((x) => `<i class="${x ? 'f' : ''}"></i>`).join('');
     $('#gpDigits').textContent = d.map((x) => x || '·').join(' ');
+    drawWatch();
   }
   function resetDigits() { clearTimeout(clr); d = ['', '', '', '']; ix = 0; drawDigits(); }
   // los dígitos sueltos se borran solos: evita que un gesto accidental se mezcle con el año siguiente
@@ -152,9 +182,12 @@
     send() { sendYear(); },
     replay() { if (cur) { showEv(cur, false); speak(cur); vibrate(cur); } else toast('Aún no hay ningún código'); },
     dim() { S.dim = !S.dim; saveS(); apply(); },
+    listen() { listenOnce(); },
+    tnext() { setTarget(curTarget() + 1); toast('Destino: ESP ' + curTarget()); buzz(15); },
+    tprev() { setTarget(curTarget() - 1); toast('Destino: ESP ' + curTarget()); buzz(15); },
   };
-  const ACTS = [...Array(10).keys()].map((n) => 'd' + n).concat(['back', 'clear', 'send', 'replay', 'dim']);
-  const ACT_NAME = { back: 'Borrar el último dígito', clear: 'Limpiar el año tecleado', send: 'Enviar el año (cuando hay 4 dígitos)', replay: 'Repetir el último código', dim: 'Pantalla discreta (activar/desactivar)' };
+  const ACTS = [...Array(10).keys()].map((n) => 'd' + n).concat(['back', 'clear', 'send', 'replay', 'listen', 'tprev', 'tnext', 'dim']);
+  const ACT_NAME = { back: 'Borrar el último dígito', clear: 'Limpiar el año tecleado', send: 'Enviar el año (cuando hay 4 dígitos)', replay: 'Repetir el último código', listen: 'Escuchar un año por voz (una vez)', tnext: 'Destino: siguiente espectador', tprev: 'Destino: espectador anterior', dim: 'Pantalla discreta (activar/desactivar)' };
   const actName = (a) => /^d\d$/.test(a) ? 'Dígito ' + a[1] : ACT_NAME[a] || a;
   function run(a, src) { if (/^d\d$/.test(a)) typeDigit(a[1], src || 'gesto'); else if (A[a]) A[a](); }
   $('#keys').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => `<button data-n="${n}">${n}</button>`).join('');
@@ -162,7 +195,7 @@
   $('#kBack').onclick = () => A.back(); $('#kReplay').onclick = () => A.replay();
 
   // ---------- gestos: lista editable + motor ----------
-  const DEF_G = [['UU', 'd1'], ['UR', 'd2'], ['UD', 'd3'], ['UL', 'd4'], ['RU', 'd5'], ['RR', 'd6'], ['RD', 'd7'], ['RL', 'd8'], ['DU', 'd9'], ['DR', 'd0'], ['DD', 'back'], ['DL', 'clear'], ['LU', 'replay'], ['LD', 'send']];
+  const DEF_G = [['UU', 'd1'], ['UR', 'd2'], ['UD', 'd3'], ['UL', 'd4'], ['RU', 'd5'], ['RR', 'd6'], ['RD', 'd7'], ['RL', 'd8'], ['DU', 'd9'], ['DR', 'd0'], ['DD', 'back'], ['DL', 'clear'], ['LU', 'replay'], ['LD', 'send'], ['LR', 'listen']];
   const defaults = () => DEF_G.map(([seq, act], i) => ({ id: 'g' + i, seq, act }));
   const okG = (g) => g && /^[UDLR]{1,5}$/.test(g.seq) && ACTS.includes(g.act);
   let G; try { const a = JSON.parse(store.get('rx_g2', 'null')); G = Array.isArray(a) && a.every(okG) ? a : defaults(); } catch { G = defaults(); }
@@ -316,7 +349,35 @@
     rec.onend = () => { if (S.voice && rec) setTimeout(() => { try { rec.start(); } catch {} }, 250); };
     try { rec.start(); } catch {}
   }
+  // Escucha puntual (respaldo): no deja el micrófono abierto ni capta conversaciones de fondo
+  let onceRec = null;
+  const micUi = (on) => { $('#bkVoice').classList.toggle('on', on); $('#bkVoice span').textContent = on ? 'Escuchando… di el año' : 'Decir el año'; };
+  function listenOnce() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('Este navegador no tiene reconocimiento de voz'); return; }
+    if (onceRec) { try { onceRec.stop(); } catch {} onceRec = null; micUi(false); return; }
+    const r = new SR(); onceRec = r; r.lang = 'es-ES'; r.continuous = false; r.interimResults = false;
+    const done = () => { if (onceRec === r) { onceRec = null; micUi(false); } };
+    r.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (!e.results[i].isFinal) continue;
+        const y = MC.parseYear(e.results[i][0].transcript);
+        if (y) { local(y, 'voz'); try { r.stop(); } catch {} done(); return; }
+      }
+      toast('No entendí un año: repítelo');
+    };
+    r.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Permite el micrófono para usar la voz'); done(); };
+    r.onend = done; micUi(true); buzz(20);
+    try { r.start(); } catch { done(); }
+    setTimeout(() => { if (onceRec === r) { try { r.stop(); } catch {} done(); } }, 9000);
+  }
   function voiceOff() { const r = rec; rec = null; if (r) try { r.stop(); } catch {} }
+
+  // ---------- respaldo de emergencia ----------
+  const openBk = () => { $('#bk').hidden = false; drawTarget(); };
+  const closeBk = () => { $('#bk').hidden = true; if (onceRec) { try { onceRec.stop(); } catch {} } };
+  $('#bkBtn').onclick = () => ($('#bk').hidden ? openBk() : closeBk()); $('#bkOpen').onclick = openBk; $('#bkX').onclick = closeBk;
+  $('#tgtPrev').onclick = () => A.tprev(); $('#tgtNext').onclick = () => A.tnext(); $('#bkVoice').onclick = () => listenOnce();
 
   // ---------- ajustes / enlace / QR ----------
   function drawLink() {
@@ -365,16 +426,61 @@
     $('#wtopic').textContent = TOPIC + '-w'; $('#micState').textContent = S.voice ? '● Escuchando' : '';
     if (S.voice) voiceOn(); else voiceOff();
   }
-  $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'askname') drawLink(); if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
+  $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'askname') drawLink(); if (i.dataset.k === 'gest' && i.checked && !$('#bk').hidden) { closeBk(); go('home'); } if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
+
+  // ---------- vista de reloj (pantalla redonda o cuadrada) ----------
+  // Un espectador en grande (código, año, BISIESTO) o hasta 5 en lista (ESP · año · código · B). Todo cabe sin desplazarse.
+  const isWatch = () => document.body.classList.contains('watch');
+  function drawWatch() {
+    if (!isWatch()) return;
+    $('#wDot').classList.toggle('on', $('#dot').classList.contains('on'));
+    const ents = [...board.values()].sort((a, b) => seatNum(a) - seatNum(b)), body = $('#wBody');
+    if (!ents.length) { body.innerHTML = '<div class="wv-wait"><div class="pulse"><i></i><i></i><i></i></div><p>Esperando…</p></div>'; }
+    else {
+      const mode = wmode === 'auto' ? (ents.length === 1 ? 'hero' : 'list') : wmode;
+      const last = (cur && board.get(keyOf(cur))) || ents.reduce((a, b) => (b.ts > a.ts ? b : a));
+      if (mode === 'hero') {
+        body.innerHTML = `<div class="wv-who">${esc(whoTxt(last))}${pname(last) ? ' · ' + esc(pname(last)) : ''}</div><div class="wv-code">${last.code}</div><div class="wv-year">${last.year}</div>${last.leap ? '<div class="wv-leap">BISIESTO</div>' : ''}`;
+      } else {
+        body.innerHTML = `<div class="wlist">${ents.map((e) => `<div class="wr${e === last ? ' hl' : ''}"><b>${esc(whoTxt(e))}</b><span class="y">${e.year}</span><span class="b">${e.leap ? 'B' : ''}</span><strong>${e.code}</strong></div>`).join('')}</div>`;
+      }
+    }
+    const typed = d.filter(Boolean).length;
+    $('#wFoot').textContent = typed ? `ESP ${curTarget()} · ${d.map((x) => x || '·').join(' ')}` : '';
+  }
+  function applyForm() {
+    const f = store.get('rx_form', 'auto'), w = innerWidth, h = innerHeight, mn = Math.min(w, h), ratio = Math.max(w, h) / Math.max(1, mn);
+    const watch = f === 'round' || f === 'square' ? true : f === 'phone' ? false : (mn <= 340 && ratio <= 1.3);
+    document.body.classList.toggle('watch', watch); document.body.classList.toggle('round', watch && f !== 'square'); drawWatch();
+  }
+  { const q = new URL(location.href).searchParams.get('form'); if (['auto', 'phone', 'round', 'square'].includes(q)) store.set('rx_form', q); }
+  $('#formSel').value = store.get('rx_form', 'auto'); $('#formSel').onchange = (e) => { store.set('rx_form', e.target.value); applyForm(); };
+  addEventListener('resize', applyForm); addEventListener('orientationchange', applyForm);
+  // toque = alternar vista; pulsación larga = ronda nueva; deslizar = gestos de respaldo
+  { const wv = $('#wv'); let t0 = 0, x0 = 0, y0 = 0, lp = null;
+    wv.addEventListener('pointerdown', (e) => { t0 = Date.now(); x0 = e.clientX; y0 = e.clientY; clearTimeout(lp); lp = setTimeout(() => { lp = null; newRound(); }, 900); });
+    wv.addEventListener('pointerup', (e) => { const moved = Math.hypot(e.clientX - x0, e.clientY - y0); clearTimeout(lp); if (lp === null && Date.now() - t0 >= 900) return; if (moved < 12 && Date.now() - t0 < 600) { const n = [...board.values()].length; if (n > 1 || wmode !== 'auto') { const cm = wmode === 'auto' ? (n === 1 ? 'hero' : 'list') : wmode; wmode = cm === 'hero' ? 'list' : 'hero'; drawWatch(); buzz(10); } } });
+    wv.addEventListener('pointercancel', () => clearTimeout(lp)); swipe(wv, (x) => dir(x, 'pantalla')); }
 
   // ---------- inicio ----------
   function begin(t) {
+    const wk = $('#wKey').value.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+    if (wk && wk.length >= 4 && wk !== key) { store.set('rx_key', wk); store.set('rx_seats', '{}'); store.set('rx_names', '{}'); location.reload(); return; }
     $('#welcome').remove(); $('#app').removeAttribute('aria-hidden');
     apply(); connect(); go(t || 'home');          // primero arranca todo; lo opcional después y sin esperar
     try { if ('wakeLock' in navigator) { navigator.wakeLock.request('screen').catch(() => {}); document.addEventListener('visibilitychange', () => { if (!document.hidden) navigator.wakeLock.request('screen').catch(() => {}); }); } } catch {}
     try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch {}
   }
   $('#start').onclick = () => begin('home'); $('#startHelp').onclick = () => begin('help');
-  $('#keyshow').textContent = key; drawDigits(); drawGestures(); drawMap(); drawLink(); drawBoard(null); showSeq('');
+  applyForm();
+  $('#keyIn').value = key;
+  $('#keyIn').addEventListener('change', (e) => {
+    const v = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+    if (v.length < 4) { toast('La clave necesita al menos 4 letras o números'); e.target.value = key; return; }
+    store.set('rx_key', v); store.set('rx_seats', '{}'); store.set('rx_names', '{}'); toast('Clave guardada: reiniciando…'); setTimeout(() => location.reload(), 700);
+  });
+  $('#watchLink').textContent = 'Para el reloj, usa esta misma clave: ' + key;
+  $('#wKey').value = key;
+  drawDigits(); drawGestures(); drawMap(); drawLink(); drawBoard(null); showSeq('');
   if ('serviceWorker' in navigator && !isApp) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

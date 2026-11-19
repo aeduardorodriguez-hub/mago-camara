@@ -37,6 +37,7 @@
     <div class="w-logo"><img src="icon-192.png" alt=""></div>
     <h1>Receptor de calendario mental</h1>
     <p>Recibe en tu bolsillo el código del año que busca el espectador. Voz, vibración, reloj, mando o gestos: tú eliges cómo.</p>
+    <label class="w-key"><span>Clave</span><input id="wKey" type="text" maxlength="32" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
     <button class="btn primary big" id="start">Empezar</button>
     <button class="btn ghost" id="startHelp">Cómo funciona</button>
   </div>
@@ -45,6 +46,7 @@
 <div id="app" aria-hidden="true">
   <header class="bar">
     <div class="ttl"><span class="logo-dot"></span><b id="barTitle">Inicio</b></div>
+    <button class="bkbtn" id="bkBtn" aria-label="Respaldo de emergencia">Respaldo</button>
     <div class="chip" id="status"><i id="dot"></i><span id="pres">Conectando…</span></div>
   </header>
   <div class="lastrow" id="lastRow" hidden></div>
@@ -71,12 +73,7 @@
       </div>
       <div class="bhead" id="boardHead" hidden><b>Espectadores</b><button class="btn sm" id="newRound">Nueva ronda</button></div>
       <div id="board" class="board"></div>
-      <div class="card keycard">
-        <div class="kc-h"><b>Introducir año a mano</b><span class="muted">Si el espectador se sale de la web</span></div>
-        <div id="digits" class="digits"></div>
-        <div id="keys" class="keys"></div>
-        <div class="row2"><button class="btn" id="kBack">Borrar</button><button class="btn" id="kReplay">Repetir</button></div>
-      </div>
+      <button class="btn wide bk-open" id="bkOpen"><svg><use href="#i-tune"/></svg>Respaldo de emergencia</button>
     </section>
 
     <!-- ============ ENTRADA ============ -->
@@ -126,9 +123,15 @@
         <div class="qr" id="qr"></div>
         <small class="muted">Imprime o muestra este QR, o grábalo en una etiqueta NFC. Cada persona entra con el mismo enlace.</small>
       </div>
+      <h2 class="sec">Pantalla</h2>
+      <div class="card">
+        <label class="fld"><span>Forma de la pantalla</span><select id="formSel"><option value="auto">Automática</option><option value="phone">Teléfono</option><option value="round">Reloj redondo</option><option value="square">Reloj cuadrado</option></select></label>
+        <small class="muted">En relojes se muestra una vista compacta: un espectador en grande o hasta 5 en lista. Toca para alternar; mantén pulsado para una ronda nueva.</small>
+      </div>
       <h2 class="sec">Sala</h2>
       <div class="card">
-        <div class="fld"><span>Clave secreta</span><div class="keyshow"><code id="keyshow"></code></div></div>
+        <label class="fld"><span>Clave secreta (la misma en todos tus dispositivos)</span><input id="keyIn" type="text" maxlength="32" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        <div class="linkbox" id="watchLink"></div>
         <label class="fld"><span>Servidor de mensajes (avanzado)</span><input id="srvIn" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://ntfy.sh (por defecto)"></label>
         <div class="row2"><button class="btn" id="newkey">Clave nueva</button><button class="btn" id="clear">Nueva ronda</button></div>
         <small class="muted">Receptor y espectadores deben compartir la misma clave. Si la cambias, usa el enlace nuevo. El servidor público ntfy.sh admite unos 250 mensajes al día por conexión a internet; para shows grandes usa un servidor ntfy propio (gratuito) y escríbelo aquí: el enlace y el QR lo incluirán.</small>
@@ -159,6 +162,10 @@
         <p class="muted">Si la misma persona repite con otro año, su tarjeta se actualiza y conserva su número.</p></div></details>
       <details class="acc"><summary>Vibración y voz</summary>
         <div class="acc-b"><p><b>Vibración:</b> tantos pulsos cortos como el código (3 = tres pulsos). Código 0 = un pulso largo. Si es bisiesto, al final hay una pausa y un pulso largo extra.</p><p><b>Voz:</b> con auriculares dice «Persona 2. Cuatro. Bisiesto».</p></div></details>
+      <details class="acc"><summary>Respaldo de emergencia (si falla internet)</summary>
+        <div class="acc-b"><p>El botón <b>Respaldo</b> (arriba) está siempre disponible. Si la conexión cae o un espectador se sale de la página, escribe su año ahí: se guarda en <b>su número ESP</b> y no toca los demás. El destino avanza solo al siguiente espectador libre; usa ‹ › para corregir otro.</p><ul><li><b>Voz:</b> «Decir el año» escucha una sola vez (no queda el micrófono abierto).</li><li><b>Teclado:</b> los números de la pantalla o de un teclado.</li><li><b>Mando / gestos:</b> la cruceta del mando está siempre lista; la pantalla de gestos se activa desde el Respaldo.</li></ul><p class="muted">Los datos del respaldo nunca se pierden por una web que llegue después con un año anterior: gana siempre el más reciente.</p></div></details>
+      <details class="acc"><summary>Reloj inteligente</summary>
+        <div class="acc-b"><p>En pantallas pequeñas (redondas o cuadradas) la app cambia sola a una vista compacta: <b>1 espectador en grande</b> (código, año y BISIESTO) o <b>hasta 5 en lista</b> (ESP · año · código · B). Toca para alternar entre ambas; mantén pulsado para empezar una ronda nueva. Los deslizamientos ↑ ↓ ← → sirven para el respaldo.</p><p>Instalación en un Galaxy Watch (Wear OS): instala el APK por ADB inalámbrico (Opciones de desarrollador → Depuración por Wi-Fi). En la primera pantalla escribe la misma <b>clave</b> que tu teléfono. También puedes recibir avisos con la app <b>ntfy</b> (Entrada → Avisar al reloj). En Ajustes puedes forzar «Reloj redondo» o «Reloj cuadrado».</p></div></details>
       <details class="acc"><summary>Si el espectador se sale de la web</summary>
         <div class="acc-b"><p>Que te diga el año en voz alta y recíbelo de tres formas:</p><ul><li><b>Voz:</b> activa «Voz» en Entrada y deja que lo escuche.</li><li><b>Gestos:</b> con la pantalla negra o con la cruceta del mando, teclea los 4 dígitos con deslizamientos.</li><li><b>Teclado:</b> los botones numéricos de Inicio.</li></ul></div></details>
       <details class="acc"><summary>Tabla de gestos actual</summary><div class="acc-b" id="helpGest"></div></details>
@@ -178,7 +185,20 @@
     <button data-go="set"><svg><use href="#i-gear"/></svg><span>Ajustes</span></button>
     <button data-go="help"><svg><use href="#i-help"/></svg><span>Ayuda</span></button>
   </nav>
+  <div id="wv" class="wv"><i id="wDot" class="wdot"></i><div class="wv-body" id="wBody"></div><div class="wv-foot" id="wFoot"></div></div>
 </div>
+
+<!-- Respaldo de emergencia -->
+<div id="bk" class="sheet bksheet" hidden><div class="sh-b">
+  <div class="sh-h"><b>Respaldo de emergencia</b><button class="x" id="bkX" aria-label="Cerrar">✕</button></div>
+  <p class="muted sm">Si un espectador no llega por la web, escribe aquí su año: se guarda en su número ESP y no afecta a los demás.</p>
+  <div class="tgt"><button class="icb" id="tgtPrev" aria-label="Espectador anterior">‹</button><div class="tgt-m"><b id="tgtNum">ESP 1</b><small id="tgtSub"></small></div><button class="icb" id="tgtNext" aria-label="Espectador siguiente">›</button></div>
+  <div id="digits" class="digits"></div>
+  <div id="keys" class="keys"></div>
+  <div class="row2"><button class="btn" id="kBack">Borrar</button><button class="btn" id="kReplay">Repetir último</button></div>
+  <button class="btn wide bkvoice" id="bkVoice"><svg><use href="#i-mic"/></svg><span>Decir el año</span></button>
+  <label class="mode sm"><span class="mt"><b>Pantalla de gestos</b><small>Pantalla negra: teclea con deslizamientos o con la cruceta del mando.</small></span><input type="checkbox" class="sw" data-k="gest"></label>
+</div></div>
 
 <!-- Editor de gesto -->
 <div id="sheet" class="sheet" hidden>
