@@ -21,6 +21,7 @@ PASO 3 - RELOJ (Galaxy Watch, redondo o cuadrado)
 3. En el teléfono: Ajustes > "Vincular dispositivos" > escribe el código > "Enviar mi clave". Listo, no hay que teclear nada en el reloj.
 Manejo en el reloj: toque = alternar vista (1 espectador grande / lista de hasta 5) · pulsación larga o botón "Menú" = menú (Respaldo, Gestos, Entrada, Ajustes, Vincular, Nueva ronda, Ayuda) · A− / A+ = tamaño del texto · "‹ Atrás" o el botón atrás del reloj = volver.
 Gestos en el reloj: Menú > Gestos (crear, editar, borrar; deslizar en el recuadro para dibujar el gesto).
+USAR los gestos en vivo: Menú > "✋ Teclear con gestos" (muestra destino ESP, dígitos tecleados, gesto reconocido y el resultado). También funcionan deslizando en la pantalla de inicio del reloj.
 
 VARIOS ESPECTADORES: ESP 1, ESP 2... por orden de llegada. "Nueva ronda" antes de empezar; lápiz de la tarjeta para cambiar número o poner nombre; Ajustes > "Pedir nombre al espectador" (opcional).
 RESPALDO: botón "Respaldo" (voz de una escucha, teclado, mando, gestos) -> se guarda en el ESP de destino sin pisar a los demás; gana el dato más reciente.

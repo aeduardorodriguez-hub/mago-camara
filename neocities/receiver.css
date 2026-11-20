@@ -230,3 +230,16 @@ body.round .wv{padding:18% 16% 23%}body.square .wv{padding:6% 6% 19%}
 .wv-code{font-size:calc(var(--wk,1) * clamp(52px,36vmin,190px))!important}.wv-year{font-size:calc(var(--wk,1) * clamp(16px,9vmin,38px))!important}.wv-leap{font-size:calc(var(--wk,1) * clamp(13px,7.2vmin,30px))!important}.wv-who{font-size:calc(var(--wk,1) * clamp(12px,5.6vmin,22px))!important}
 .wr{font-size:calc(var(--wk,1) * clamp(12px,5.7vmin,22px))!important}
 .wv-wait small{display:block;margin-top:1.2vmin;font-size:clamp(10px,4vmin,15px);color:var(--t3)}
+
+/* pantalla de gestos en vivo (reloj) */
+.wlive{position:fixed;inset:0;z-index:57;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.6vmin;padding:18% 12% 22%;text-align:center;background:var(--bg);touch-action:none;-webkit-user-select:none;user-select:none}
+body.square .wlive{padding:8% 8% 20%}
+body.watch.wp-live .wlive{display:flex}
+body.watch.wp-live .wback{display:flex}
+.wl-tgt{font-size:calc(var(--wk,1) * clamp(14px,6.4vmin,26px));color:var(--acc);font-weight:800}
+.wl-dig{font-size:calc(var(--wk,1) * clamp(28px,15vmin,60px));font-weight:900;letter-spacing:.14em;font-variant-numeric:tabular-nums}
+.wl-seq{font-size:calc(var(--wk,1) * clamp(14px,7vmin,28px));color:var(--t2);min-height:1.4em;letter-spacing:.12em}
+.wl-seq.ok{color:var(--ok)}.wl-seq.bad{color:var(--bad)}
+.wl-res{display:flex;align-items:center;gap:3vmin;margin-top:1vmin;padding:1.4vmin 4vmin;border-radius:3vmin;background:var(--s1);border:1px solid var(--line);font-variant-numeric:tabular-nums;min-height:1em}
+.wl-res:empty{display:none}.wl-res b{color:var(--acc);font-size:calc(var(--wk,1) * clamp(13px,5.6vmin,22px))}.wl-res span{font-size:calc(var(--wk,1) * clamp(15px,7vmin,28px));font-weight:700}.wl-res strong{font-size:calc(var(--wk,1) * clamp(30px,15vmin,62px));font-weight:900;line-height:1}.wl-res em{font-style:normal;font-weight:900;color:#fcd34d;border:1.5px solid rgba(251,191,36,.7);border-radius:1.4vmin;padding:0 1.6vmin;font-size:calc(var(--wk,1) * clamp(11px,4.6vmin,18px))}
+.wm-live{background:linear-gradient(135deg,#2d4fd0,#6b4fd8);border-color:transparent;color:#fff}

@@ -212,6 +212,7 @@
   }
   function showSeq(s, msg, bad) {
     const el = $('#prSeq'); el.classList.toggle('ph', !s); el.textContent = s ? arrows(s) : 'Desliza aquí o usa la cruceta';
+    { const ls = $('#wlSeq'); if (ls) { ls.textContent = s ? arrows(s) + (msg ? '  ' + msg : '') : 'Desliza ↑ ↓ ← →'; ls.className = 'wl-seq' + (s && msg ? (bad ? ' bad' : ' ok') : ''); } }
     $('#gpSeq').textContent = arrows(s); const a = $('#prAct'); a.textContent = msg || ' '; a.classList.toggle('bad', !!bad);
   }
   // Entrada de direcciones (pantalla, teclado o mando). Se ignoran duplicados entre fuentes
@@ -233,7 +234,7 @@
     clearTimeout(gt); const s = buf; buf = ''; const g = G.find((x) => x.seq === s);
     if (!g) { buzz([40, 40, 40]); showSeq(s, 'Sin gesto asignado', true); }
     else if (tab === 'gest') showSeq(s, actName(g.act));
-    else { buzz(10); run(g.act, 'gesto'); showSeq(s); }
+    else { buzz(10); run(g.act, 'gesto'); showSeq(s, actName(g.act)); }
     clearTimeout(prT); prT = setTimeout(() => showSeq(''), 1600);
   }
   function swipe(el, cb) {
@@ -485,8 +486,15 @@
   // ---------- vista de reloj (pantalla redonda o cuadrada) ----------
   // Un espectador en grande (código, año, BISIESTO) o hasta 5 en lista (ESP · año · código · B). Todo cabe sin desplazarse.
   const isWatch = () => document.body.classList.contains('watch');
+  function drawLive() {
+    $('#wlTgt').textContent = 'ESP ' + curTarget();
+    $('#wlDig').textContent = d.map((x) => x || '·').join(' ');
+    const e = cur;
+    $('#wlRes').innerHTML = e ? `<b>${esc(whoTxt(e))}</b><span>${e.year}</span><strong>${e.code}</strong>${e.leap ? '<em>BISIESTO</em>' : ''}` : '';
+  }
   function drawWatch() {
     if (!isWatch()) return;
+    drawLive();
     $('#wDot').classList.toggle('on', $('#dot').classList.contains('on'));
     const ents = [...board.values()].sort((a, b) => seatNum(a) - seatNum(b)), body = $('#wBody');
     if (!ents.length) { body.innerHTML = `<div class="wv-wait"><div class="pulse"><i></i><i></i><i></i></div><p>${$('#dot').classList.contains('on') ? 'Esperando al espectador' : esc(connText())}</p><small>clave ${esc(key)}</small></div>`; }
@@ -506,9 +514,11 @@
   const nativeRound = () => { try { return !!(window.AndroidApp.isRound && window.AndroidApp.isRound()); } catch { return true; } };
   let wpage = 'home';
   function wgo(p) {
-    const bd = document.body; wpage = p; bd.classList.remove('wp-home', 'wp-menu', 'wp-page');
+    const bd = document.body; wpage = p; bd.classList.remove('wp-home', 'wp-menu', 'wp-page', 'wp-live');
     if (!isWatch()) return;
+    if (p === 'menu' || p === 'home' || p === 'bk' || p === 'live') { tab = 'home'; buf = ''; clearTimeout(gt); }   // fuera de la página Gestos, los gestos SÍ teclean (no son práctica)
     if (p === 'menu') bd.classList.add('wp-menu');
+    else if (p === 'live') bd.classList.add('wp-live');
     else if (p === 'home' || p === 'bk') { bd.classList.add('wp-home'); if (p === 'bk') openBk(); }
     else { bd.classList.add('wp-page'); go(p); }
     buzz(8); drawWatch();
@@ -518,8 +528,8 @@
     const watch = f === 'round' || f === 'square' ? true : f === 'phone' ? false : (nat || (mn <= 480 && ratio <= 1.12));
     const round = watch && (f === 'round' || (f === 'auto' && (nat ? nativeRound() : true)));
     document.body.classList.toggle('watch', watch); document.body.classList.toggle('round', round); document.body.classList.toggle('square', watch && !round);
-    if (watch && !/wp-(home|menu|page)/.test(document.body.className)) wgo('home');
-    if (!watch) document.body.classList.remove('wp-home', 'wp-menu', 'wp-page');
+    if (watch && !/wp-(home|menu|page|live)/.test(document.body.className)) wgo('home');
+    if (!watch) document.body.classList.remove('wp-home', 'wp-menu', 'wp-page', 'wp-live');
     drawWatch();
   }
   // tamaño del texto en el reloj (A− / A+): escala todo sin necesidad de zoom con los dedos
@@ -552,8 +562,10 @@
   // toque = alternar vista; pulsación larga = ronda nueva; deslizar = gestos de respaldo
   { const wv = $('#wv'); let t0 = 0, x0 = 0, y0 = 0, lp = null;
     wv.addEventListener('pointerdown', (e) => { t0 = Date.now(); x0 = e.clientX; y0 = e.clientY; clearTimeout(lp); lp = setTimeout(() => { lp = null; if (wpage === 'home') wgo('menu'); }, 650); });
+    wv.addEventListener('pointermove', (e) => { if (lp && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) { clearTimeout(lp); lp = 0; } });
     wv.addEventListener('pointerup', (e) => { const moved = Math.hypot(e.clientX - x0, e.clientY - y0); clearTimeout(lp); if (lp === null && Date.now() - t0 >= 650) return; if (moved < 12 && Date.now() - t0 < 600) { const n = [...board.values()].length; if (n > 1 || wmode !== 'auto') { const cm = wmode === 'auto' ? (n === 1 ? 'hero' : 'list') : wmode; wmode = cm === 'hero' ? 'list' : 'hero'; drawWatch(); buzz(10); } } });
     wv.addEventListener('pointercancel', () => clearTimeout(lp)); swipe(wv, (x) => dir(x, 'pantalla')); }
+  swipe($('#wlive'), (x) => dir(x, 'pantalla'));
 
   // ---------- inicio ----------
   function begin(t) {
