@@ -1,5 +1,5 @@
 // Caché del receptor: la pantalla, la voz, el mando y los gestos siguen funcionando sin internet.
-const C = 'mc-rx-v2', FILES = ['r.html', 'receiver.js', 'receiver.css', 'qr.js', 'shared.js', 'manifest.json'];
+const C = 'mc-rx-v3', FILES = ['r.html', 'receiver.js', 'receiver.css', 'qr.js', 'shared.js', 'manifest.json'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(C).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {

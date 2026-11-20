@@ -3,6 +3,8 @@ package com.mago.calendario;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.UiModeManager;
+import android.content.res.Configuration;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -61,6 +63,9 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(false);
+        s.setTextZoom(100);                 // ignora el tamaño de fuente del sistema (en relojes lo agranda y rompe el diseño)
+        s.setSupportZoom(false); s.setBuiltInZoomControls(false); s.setDisplayZoomControls(false);
+        s.setUseWideViewPort(true); s.setLoadWithOverviewMode(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         web.addJavascriptInterface(new Bridge(), "AndroidApp");
         web.setWebViewClient(new WebViewClient() {
@@ -137,6 +142,11 @@ public class MainActivity extends Activity {
                 else startRecognition();
             });
         }
+        @JavascriptInterface public boolean isWatch() {
+            UiModeManager u = (UiModeManager) getSystemService(Context.UI_MODE_SERVICE);
+            return (u != null && u.getCurrentModeType() == Configuration.UI_MODE_TYPE_WATCH) || getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH);
+        }
+        @JavascriptInterface public boolean isRound() { return getResources().getConfiguration().isScreenRound(); }
         @JavascriptInterface public void srStop() { runOnUiThread(() -> { if (recognizer != null) { recognizer.destroy(); recognizer = null; } }); }
         @JavascriptInterface public void speak(String text) {
             runOnUiThread(() -> {
@@ -164,8 +174,12 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
-        long n = System.currentTimeMillis();
-        if (n - lastBack < 2000) super.onBackPressed(); else { lastBack = n; Toast.makeText(this, "Pulsa otra vez para salir", Toast.LENGTH_SHORT).show(); }
+        // primero deja que la web cierre lo que esté abierto (hojas, menú, pestañas); si no hay nada, doble pulsación para salir
+        web.evaluateJavascript("(window.__onBack&&window.__onBack())?'1':'0'", v -> {
+            if (v != null && v.contains("1")) return;
+            long n = System.currentTimeMillis();
+            if (n - lastBack < 2000) super.onBackPressed(); else { lastBack = n; Toast.makeText(this, "Pulsa otra vez para salir", Toast.LENGTH_SHORT).show(); }
+        });
     }
     @Override protected void onDestroy() {
         if (recognizer != null) recognizer.destroy();

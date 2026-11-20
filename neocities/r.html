@@ -38,6 +38,7 @@
     <h1>Receptor de calendario mental</h1>
     <p>Recibe en tu bolsillo el código del año que busca el espectador. Voz, vibración, reloj, mando o gestos: tú eliges cómo.</p>
     <label class="w-key"><span>Clave</span><input id="wKey" type="text" maxlength="32" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+    <button class="btn primary big pairbtn" id="wPair">Vincular con el teléfono</button>
     <button class="btn primary big" id="start">Empezar</button>
     <button class="btn ghost" id="startHelp">Cómo funciona</button>
   </div>
@@ -63,6 +64,7 @@
       <div class="empty card" id="empty">
         <div class="pulse"><i></i><i></i><i></i></div>
         <h2>Esperando al espectador</h2>
+        <p class="muted conn-mini" id="emptyConn"></p>
         <p>Cuando alguien busque un año en tu enlace, el código aparecerá aquí al instante.</p>
         <ol class="steps">
           <li><b>1</b><span>Copia tu enlace o muestra el <em>QR</em>.</span></li>
@@ -122,6 +124,25 @@
         <div class="row2"><button class="btn primary" data-act="copylink"><svg><use href="#i-copy"/></svg>Copiar</button><button class="btn" id="shareBtn"><svg><use href="#i-share"/></svg>Compartir</button></div>
         <div class="qr" id="qr"></div>
         <small class="muted">Imprime o muestra este QR, o grábalo en una etiqueta NFC. Cada persona entra con el mismo enlace.</small>
+      </div>
+      <h2 class="sec">Conexión</h2>
+      <div class="card">
+        <pre class="cfgbox" id="connInfo"></pre>
+        <button class="btn primary wide" id="testConn">Probar conexión</button>
+        <label class="mode sm" style="margin-top:12px"><span class="mt"><b>Aceptar visitas sin clave</b><small>Recibe también a quien abra la página sin tu enlace (sala pública «mc-main»). Desactívalo cuando tu sitio ya tenga tu clave en config.js.</small></span><input type="checkbox" class="sw" data-k="pub"></label>
+      </div>
+      <h2 class="sec">Configurar tu sitio</h2>
+      <div class="card">
+        <small class="muted" style="margin:0 0 10px">Pega este texto en el archivo <b>config.js</b> de tu sitio (Neocities). Así cualquiera que entre a tu dirección, aunque sea sin el enlace especial, enviará a tu receptor.</small>
+        <pre class="cfgbox" id="cfgBox"></pre>
+        <div class="row2"><button class="btn primary" id="cfgCopy">Copiar</button><button class="btn" id="cfgDl">Descargar</button></div>
+      </div>
+      <h2 class="sec">Vincular dispositivos</h2>
+      <div class="card">
+        <small class="muted" style="margin:0 0 10px">Pasa tu clave a un reloj u otro móvil sin escribirla.</small>
+        <label class="fld"><span>Código que muestra el otro dispositivo</span><input id="pairIn" type="text" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off"></label>
+        <button class="btn primary wide" id="pairSend">Enviar mi clave</button>
+        <button class="btn wide" id="pairRecv">Recibir una clave de otro dispositivo</button>
       </div>
       <h2 class="sec">Pantalla</h2>
       <div class="card">
@@ -185,8 +206,27 @@
     <button data-go="set"><svg><use href="#i-gear"/></svg><span>Ajustes</span></button>
     <button data-go="help"><svg><use href="#i-help"/></svg><span>Ayuda</span></button>
   </nav>
+  <button id="wMenuBtn" class="wmbtn" aria-label="Abrir menú">☰ Menú</button>
+  <div id="wmenu" class="wmenu"><div class="wm-list">
+    <div class="wm-size"><button id="wkMinus" aria-label="Texto más pequeño">A−</button><span id="wkVal">100%</span><button id="wkPlus" aria-label="Texto más grande">A+</button></div>
+    <button class="wm-i" data-wgo="bk">Respaldo</button>
+    <button class="wm-i" data-wgo="gest">Gestos</button>
+    <button class="wm-i" data-wgo="input">Entrada</button>
+    <button class="wm-i" data-wgo="set">Ajustes</button>
+    <button class="wm-i" data-wgo="pair">Vincular</button>
+    <button class="wm-i" data-wgo="round">Nueva ronda</button>
+    <button class="wm-i" data-wgo="help">Ayuda</button>
+  </div></div>
+  <button id="wback" class="wback">‹ Atrás</button>
   <div id="wv" class="wv"><i id="wDot" class="wdot"></i><div class="wv-body" id="wBody"></div><div class="wv-foot" id="wFoot"></div></div>
 </div>
+
+<!-- Vincular -->
+<div id="pairSheet" class="sheet pairsheet" hidden><div class="sh-b small">
+  <div class="sh-h"><b>Vincular</b><button class="x" id="pairCancel" aria-label="Cancelar">✕</button></div>
+  <p class="muted sm">En el teléfono: <b>Ajustes → Vincular dispositivos</b> y escribe este código:</p>
+  <div class="pair-code" id="pairCode">000 000</div>
+</div></div>
 
 <!-- Respaldo de emergencia -->
 <div id="bk" class="sheet bksheet" hidden><div class="sh-b">

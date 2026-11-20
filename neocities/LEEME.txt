@@ -1,41 +1,27 @@
 MICALENDARIO - versión Neocities (sin servidor propio)
 
 ARCHIVOS
-- index.html  = la página web para el ESPECTADOR (MiCalendario, calendario perpetuo). Un solo archivo.
-- r.html (+ receiver.js, receiver.css, shared.js, qr.js, sw.js, manifest.json, iconos) = el RECEPTOR del mentalista.
+- index.html  = página web del ESPECTADOR (MiCalendario).      - config.js = TU clave y ajustes (ver abajo).
+- r.html (+ receiver.js, receiver.css, shared.js, qr.js, sw.js, manifest.json, iconos) = RECEPTOR del mentalista (teléfono y reloj).
 
-SUBIR
-1) Sube TODO el contenido de esta carpeta a la raíz de tu sitio Neocities.
-2) Dominio micalendario.com: en Neocities se conecta un dominio propio con un plan de pago (Supporter); también debes registrarlo en un registrador y apuntar su DNS a Neocities. Mientras tanto funciona igual en TUSITIO.neocities.org.
+PASO 1 - SUBIR
+Sube TODO el contenido de esta carpeta a la raíz de tu sitio Neocities.
 
-USAR
-- MENTALISTA: abre /r.html -> "Empezar". En "Ajustes" copia el enlace del espectador o muestra su QR (también sirve para una etiqueta NFC).
-- ESPECTADOR: abre el enlace, escribe un año (1600 a 9999) y toca "Ver calendario". El año llega al receptor al instante.
-  El enlace lleva tu clave secreta (?k=...); la página la guarda y deja la dirección limpia.
-- El receptor muestra el año y su código. La palabra BISIESTO solo aparece (grande) si el año lo es.
+PASO 2 - CONECTAR EL SITIO CON TU RECEPTOR (importante)
+Receptor y emisor se encuentran por una CLAVE. Hay dos maneras:
+ A) Recomendada: en el receptor, Ajustes > "Configurar tu sitio" > Copiar. Pega ese texto en config.js de tu sitio (editor de Neocities).
+    Así CUALQUIERA que entre a tu dirección (desde un ordenador, un móvil, sin enlace especial) envía a TU receptor.
+ B) Con enlace: Ajustes > "Enlace para el espectador" (o su QR). El enlace lleva la clave (?k=...).
+Mientras pruebas, el receptor acepta también visitas SIN clave (Ajustes > "Aceptar visitas sin clave"). Desactívalo cuando uses config.js.
+Si algo no llega: receptor > Ajustes > "Probar conexión"; y en el sitio abre  index.html?debug=1  (muestra sala, servidor y respuesta de cada envío).
 
-MENSAJES
-- Por defecto usa ntfy.sh (gratis, sin cuenta), con un límite de ~250 mensajes/día por conexión a internet.
-  Para shows grandes: instala tu propio servidor ntfy y escribe su dirección en el receptor (Ajustes > Servidor de mensajes). El enlace y el QR ya la incluyen.
+PASO 3 - RELOJ (Galaxy Watch, redondo o cuadrado)
+1. Instala el APK en el reloj (ADB inalámbrico). La app detecta sola que es un reloj.
+2. En la primera pantalla toca "Vincular con el teléfono": el reloj muestra un código de 6 cifras.
+3. En el teléfono: Ajustes > "Vincular dispositivos" > escribe el código > "Enviar mi clave". Listo, no hay que teclear nada en el reloj.
+Manejo en el reloj: toque = alternar vista (1 espectador grande / lista de hasta 5) · pulsación larga o botón "Menú" = menú (Respaldo, Gestos, Entrada, Ajustes, Vincular, Nueva ronda, Ayuda) · A− / A+ = tamaño del texto · "‹ Atrás" o el botón atrás del reloj = volver.
+Gestos en el reloj: Menú > Gestos (crear, editar, borrar; deslizar en el recuadro para dibujar el gesto).
 
-MANDO / GESTOS
-- Entrada > Mando: "Asignar la cruceta paso a paso". Gestos > "Monitor de entrada" muestra lo que se recibe.
-
-VARIOS ESPECTADORES (rutina con 5 personas)
-- Cada persona recibe ESP 1, ESP 2... por ORDEN DE LLEGADA (el primero en escribir un año es ESP 1). La lista muestra ESP · año · código.
-- Antes de empezar toca "Nueva ronda". Pídeles que busquen POR TURNOS, en el orden en que están sentados.
-- Si dos entran a la vez: lápiz de la tarjeta -> cambiar número (se intercambia) o poner nombre.
-- Opción más segura: Ajustes > "Pedir nombre al espectador"; verás "ESP 2 · Ana".
-- La franja superior del receptor muestra siempre el último resultado, también con la pantalla de gestos.
-
-RESPALDO DE EMERGENCIA (si falla internet o el espectador se sale de la página)
-- El botón "Respaldo" (arriba) está siempre disponible y se pone rojo si se pierde la conexión.
-- El año tecleado / dicho ("Decir el año": una sola escucha) / hecho con gestos o con la cruceta del mando se guarda en el número ESP de "destino" (avanza solo al siguiente libre; ‹ › para corregir otro).
-- No interfiere con la web: gana siempre el dato MÁS RECIENTE; un aviso viejo que llegue tarde no pisa lo que escribiste.
-- La cruceta del mando está siempre lista; la pantalla de gestos y la voz se activan desde el Respaldo.
-
-RELOJ INTELIGENTE (redondo o cuadrado)
-- En pantallas pequeñas la app cambia sola a una vista compacta: 1 espectador en grande (código, año, BISIESTO) o hasta 5 en lista (ESP · año · código · B). Toque = alternar; pulsación larga = ronda nueva; deslizar = gestos de respaldo.
-- Ajustes > Pantalla: Automática / Teléfono / Reloj redondo / Reloj cuadrado (también ?form=round en la dirección).
-- La CLAVE debe ser la misma que en el teléfono: ahora se puede editar en Ajustes (usa una corta que puedas escribir en el reloj) y la primera pantalla del reloj tiene un campo para escribirla.
-- Galaxy Watch: instala el APK por ADB inalámbrico. Alternativa: app ntfy (Entrada > Avisar al reloj).
+VARIOS ESPECTADORES: ESP 1, ESP 2... por orden de llegada. "Nueva ronda" antes de empezar; lápiz de la tarjeta para cambiar número o poner nombre; Ajustes > "Pedir nombre al espectador" (opcional).
+RESPALDO: botón "Respaldo" (voz de una escucha, teclado, mando, gestos) -> se guarda en el ESP de destino sin pisar a los demás; gana el dato más reciente.
+MENSAJES: ntfy.sh gratis (~250 mensajes/día por conexión). Para shows grandes usa tu propio servidor ntfy (Ajustes > Servidor de mensajes).

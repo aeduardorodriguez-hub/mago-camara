@@ -11,7 +11,7 @@
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
   // ---------- ajustes ----------
-  const DEF = { web: 1, voice: 0, pad: 1, gest: 0, speak: 1, seat: 1, vib: 1, dim: 0, watch: 0, autosend: 1, askname: 0 };
+  const DEF = { web: 1, voice: 0, pad: 1, gest: 0, speak: 1, seat: 1, vib: 1, dim: 0, watch: 0, autosend: 1, askname: 0, pub: 1 };
   const S = {}; for (const k in DEF) S[k] = store.get('rx_' + k, String(DEF[k])) === '1';
   S.gap = +store.get('rx_gap', '650') || 650; S.sens = +store.get('rx_sens', '30') || 30; S.clearSec = +store.get('rx_clearSec', '6');
   const saveS = () => { for (const k in DEF) store.set('rx_' + k, S[k] ? '1' : '0'); store.set('rx_gap', S.gap); store.set('rx_sens', S.sens); store.set('rx_clearSec', S.clearSec); };
@@ -19,6 +19,7 @@
   // ---------- clave y enlace del espectador ----------
   const rnd = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), (b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
   const urlKey = (new URL(location.href).searchParams.get('k') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+  const hadKey = !!store.get('rx_key', '');
   const key = urlKey || store.get('rx_key', '') || rnd(); store.set('rx_key', key);
   { const fq = new URL(location.href).searchParams.get('form'); if (['auto', 'phone', 'round', 'square'].includes(fq)) store.set('rx_form', fq); }
   if (urlKey && !isApp) history.replaceState(null, '', location.pathname);
@@ -122,15 +123,17 @@
     $('#dot').classList.toggle('on', on);
     if (on) { if (typeof offT === 'number') clearTimeout(offT); offT = null; $('#bkBtn').classList.remove('alert'); $('#pres').textContent = 'En línea'; }
     else {
-      if (offT === null) offT = setTimeout(() => { offT = 'on'; $('#bkBtn').classList.add('alert'); $('#pres').textContent = 'Sin conexión'; toast('Sin conexión: usa «Respaldo» si lo necesitas'); buzz([200, 100, 200]); drawWatch(); }, 6000);
+      if (offT === null) offT = setTimeout(() => { offT = 'on'; $('#bkBtn').classList.add('alert'); $('#pres').textContent = 'Sin conexión'; toast('Sin conexión: usa «Respaldo» si lo necesitas'); buzz([200, 100, 200]); drawConn(); }, 6000);
       if (offT !== 'on') $('#pres').textContent = 'Reconectando…';
     }
-    drawWatch();
+    drawConn();
   };
 
+  let testWait = null;
+  const topics = () => [TOPIC].concat(S.pub ? ['mc-main'] : []);
   function connect() {
     if (es) es.close();
-    es = new EventSource(`${NTFY}${TOPIC}/sse?since=${lastT}`);
+    es = new EventSource(`${NTFY}${topics().join(',')}/sse?since=${lastT}`);
     es.onopen = () => online(true);
     es.onerror = () => online(false);
     es.onmessage = (e) => {
@@ -138,6 +141,7 @@
       if (m.event !== 'message' || !m.id || seen.has(m.id)) return; seen.add(m.id);
       if (m.time) lastT = Math.max(lastT, m.time);
       let p; try { p = JSON.parse(m.message); } catch { return; }
+      if (p && p._test) { if (testWait && testWait.id === p._test) testWait.res(Date.now() - testWait.t0); return; }   // mensaje de prueba de conexión
       const i = MC.info(p.y); if (!i || !S.web || typeof p.s !== 'string') return;
       const sid = p.s.slice(0, 12), seat = seatOf(sid), old = Date.now() / 1000 - (m.time || 0) > 30;
       const prevEv = board.get('w' + sid); if (prevEv && prevEv.ts > (m.time || Date.now() / 1000) * 1000) return;   // gana siempre el más reciente
@@ -234,7 +238,7 @@
   }
   function swipe(el, cb) {
     let sx = 0, sy = 0, id = null;
-    el.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; id = e.pointerId; });
+    el.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; id = e.pointerId; try { el.setPointerCapture(e.pointerId); } catch {} });
     el.addEventListener('pointerup', (e) => { if (id !== e.pointerId) return; id = null; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) < S.sens) return; cb(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U')); });
     el.addEventListener('pointercancel', () => { id = null; });
   }
@@ -373,9 +377,59 @@
   }
   function voiceOff() { const r = rec; rec = null; if (r) try { r.stop(); } catch {} }
 
+  // ---------- estado de la conexión, prueba y configuración del sitio ----------
+  const connText = () => ($('#dot').classList.contains('on') ? 'En línea' : (offT === 'on' ? 'Sin conexión' : 'Conectando…'));
+  function drawConn() {
+    const info = `Sala: ${TOPIC}${S.pub ? ' + sala pública (mc-main)' : ''}\nServidor: ${NTFY.replace(/\/$/, '')}\nEstado: ${connText()}`;
+    if ($('#connInfo')) $('#connInfo').textContent = info;
+    if ($('#emptyConn')) $('#emptyConn').textContent = `${connText()} · clave ${key}`;
+    drawWatch();
+  }
+  $('#testConn').onclick = async () => {
+    const out = $('#connInfo'), id = 't' + Math.random().toString(36).slice(2, 8); out.textContent = 'Probando…';
+    const got = new Promise((res) => { testWait = { id, res, t0: Date.now() }; setTimeout(() => res(null), 7000); });
+    let status = '';
+    try { const r = await fetch(NTFY + TOPIC, { method: 'POST', body: JSON.stringify({ s: 'test', l: 'prueba', y: 0, _test: id }) }); status = r.status; } catch { status = 'bloqueado'; }
+    const ms = await got; testWait = null; let msg;
+    if (status === 200 && ms !== null) msg = `✓ Conexión correcta: envío y recepción en ${ms} ms.`;
+    else if (status === 200) msg = '⚠ Se pudo ENVIAR pero no se RECIBE: la escucha está caída. Revisa tu internet y espera unos segundos.';
+    else if (status === 429) msg = '✗ ntfy.sh limitó los envíos (cuota diaria). Usa un servidor propio en Ajustes.';
+    else if (status === 'bloqueado') msg = '✗ No se puede enviar: sin internet o bloqueado por una red/extensión.';
+    else msg = `✗ El servidor respondió ${status}.`;
+    toast(msg.slice(0, 60)); out.textContent = msg + '\n\n' + `Sala: ${TOPIC}\nServidor: ${NTFY.replace(/\/$/, '')}`;
+  };
+  const cfgText = () => `window.MC_CONFIG = {\n  key: '${key}',\n  server: '${srvOk(srvVal()) ? srvVal() : ''}',\n  askName: ${!!S.askname},\n  brand: 'MiCalendario'\n};\n`;
+  const drawCfg = () => { $('#cfgBox').textContent = cfgText(); };
+  $('#cfgCopy').onclick = async () => toast((await copyText(cfgText())) ? 'Copiado: pégalo en config.js' : 'No se pudo copiar');
+  $('#cfgDl').onclick = () => {
+    if (isApp) { copyText(cfgText()); toast('Copiado: pégalo en config.js'); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([cfgText()], { type: 'text/javascript' })); a.download = 'config.js'; document.body.appendChild(a); a.click(); a.remove();
+  };
+  // vincular: el dispositivo nuevo muestra un código de 6 cifras; el que ya tiene la clave lo escribe y se la envía
+  const PAIR = () => (store.get('rx_pairsrv', '') || 'https://ntfy.sh').replace(/\/?$/, '/');
+  let pairES = null;
+  function startPairing() {
+    stopPairing(); const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+    $('#pairCode').textContent = code.slice(0, 3) + ' ' + code.slice(3); $('#pairSheet').hidden = false;
+    pairES = new EventSource(`${PAIR()}mcpair-${code}/sse`);
+    pairES.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch { return; } if (m.event !== 'message') return;
+      let p; try { p = JSON.parse(m.message); } catch { return; }
+      const k = String(p.key || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32); if (k.length < 4) return;
+      store.set('rx_key', k); store.set('rx_seats', '{}'); store.set('rx_names', '{}'); store.set('rx_srv', srvOk(p.srv) ? p.srv : ''); if (p.n === 1) store.set('rx_askname', '1');
+      buzz([60, 60, 120]); toast('¡Vinculado! Reiniciando…'); setTimeout(() => location.reload(), 900);
+    };
+  }
+  function stopPairing() { if (pairES) { pairES.close(); pairES = null; } $('#pairSheet').hidden = true; }
+  $('#pairRecv').onclick = startPairing; $('#pairCancel').onclick = stopPairing; $('#wPair').onclick = startPairing;
+  $('#pairSend').onclick = async () => {
+    const code = $('#pairIn').value.replace(/\D/g, ''); if (code.length !== 6) { toast('Escribe los 6 dígitos del otro dispositivo'); return; }
+    try { const r = await fetch(`${PAIR()}mcpair-${code}`, { method: 'POST', body: JSON.stringify({ key, srv: srvOk(srvVal()) ? srvVal() : '', n: S.askname ? 1 : 0 }) }); toast(r.ok ? 'Clave enviada ✓' : `No se pudo enviar (${r.status})`); } catch { toast('Sin conexión'); }
+  };
+
   // ---------- respaldo de emergencia ----------
   const openBk = () => { $('#bk').hidden = false; drawTarget(); };
-  const closeBk = () => { $('#bk').hidden = true; if (onceRec) { try { onceRec.stop(); } catch {} } };
+  const closeBk = () => { $('#bk').hidden = true; if (onceRec) { try { onceRec.stop(); } catch {} } if (isWatch() && wpage === 'bk') wgo('menu'); };
   $('#bkBtn').onclick = () => ($('#bk').hidden ? openBk() : closeBk()); $('#bkOpen').onclick = openBk; $('#bkX').onclick = closeBk;
   $('#tgtPrev').onclick = () => A.tprev(); $('#tgtNext').onclick = () => A.tnext(); $('#bkVoice').onclick = () => listenOnce();
 
@@ -426,7 +480,7 @@
     $('#wtopic').textContent = TOPIC + '-w'; $('#micState').textContent = S.voice ? '● Escuchando' : '';
     if (S.voice) voiceOn(); else voiceOff();
   }
-  $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'askname') drawLink(); if (i.dataset.k === 'gest' && i.checked && !$('#bk').hidden) { closeBk(); go('home'); } if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
+  $$('.sw').forEach((i) => i.addEventListener('change', () => { S[i.dataset.k] = i.checked; saveS(); apply(); if (i.dataset.k === 'askname') { drawLink(); drawCfg(); } if (i.dataset.k === 'pub') { connect(); drawConn(); } if (i.dataset.k === 'gest' && i.checked && !$('#bk').hidden) { closeBk(); go('home'); } if (i.dataset.k === 'gest' && i.checked) toast('Ve a Inicio: la pantalla queda negra para gestos'); }));
 
   // ---------- vista de reloj (pantalla redonda o cuadrada) ----------
   // Un espectador en grande (código, año, BISIESTO) o hasta 5 en lista (ESP · año · código · B). Todo cabe sin desplazarse.
@@ -435,7 +489,7 @@
     if (!isWatch()) return;
     $('#wDot').classList.toggle('on', $('#dot').classList.contains('on'));
     const ents = [...board.values()].sort((a, b) => seatNum(a) - seatNum(b)), body = $('#wBody');
-    if (!ents.length) { body.innerHTML = '<div class="wv-wait"><div class="pulse"><i></i><i></i><i></i></div><p>Esperando…</p></div>'; }
+    if (!ents.length) { body.innerHTML = `<div class="wv-wait"><div class="pulse"><i></i><i></i><i></i></div><p>${$('#dot').classList.contains('on') ? 'Esperando al espectador' : esc(connText())}</p><small>clave ${esc(key)}</small></div>`; }
     else {
       const mode = wmode === 'auto' ? (ents.length === 1 ? 'hero' : 'list') : wmode;
       const last = (cur && board.get(keyOf(cur))) || ents.reduce((a, b) => (b.ts > a.ts ? b : a));
@@ -448,18 +502,57 @@
     const typed = d.filter(Boolean).length;
     $('#wFoot').textContent = typed ? `ESP ${curTarget()} · ${d.map((x) => x || '·').join(' ')}` : '';
   }
-  function applyForm() {
-    const f = store.get('rx_form', 'auto'), w = innerWidth, h = innerHeight, mn = Math.min(w, h), ratio = Math.max(w, h) / Math.max(1, mn);
-    const watch = f === 'round' || f === 'square' ? true : f === 'phone' ? false : (mn <= 340 && ratio <= 1.3);
-    document.body.classList.toggle('watch', watch); document.body.classList.toggle('round', watch && f !== 'square'); drawWatch();
+  const nativeWatch = () => { try { return !!(isApp && window.AndroidApp.isWatch && window.AndroidApp.isWatch()); } catch { return false; } };
+  const nativeRound = () => { try { return !!(window.AndroidApp.isRound && window.AndroidApp.isRound()); } catch { return true; } };
+  let wpage = 'home';
+  function wgo(p) {
+    const bd = document.body; wpage = p; bd.classList.remove('wp-home', 'wp-menu', 'wp-page');
+    if (!isWatch()) return;
+    if (p === 'menu') bd.classList.add('wp-menu');
+    else if (p === 'home' || p === 'bk') { bd.classList.add('wp-home'); if (p === 'bk') openBk(); }
+    else { bd.classList.add('wp-page'); go(p); }
+    buzz(8); drawWatch();
   }
+  function applyForm() {
+    const f = store.get('rx_form', 'auto'), w = innerWidth, h = innerHeight, mn = Math.min(w, h), ratio = Math.max(w, h) / Math.max(1, mn), nat = nativeWatch();
+    const watch = f === 'round' || f === 'square' ? true : f === 'phone' ? false : (nat || (mn <= 480 && ratio <= 1.12));
+    const round = watch && (f === 'round' || (f === 'auto' && (nat ? nativeRound() : true)));
+    document.body.classList.toggle('watch', watch); document.body.classList.toggle('round', round); document.body.classList.toggle('square', watch && !round);
+    if (watch && !/wp-(home|menu|page)/.test(document.body.className)) wgo('home');
+    if (!watch) document.body.classList.remove('wp-home', 'wp-menu', 'wp-page');
+    drawWatch();
+  }
+  // tamaño del texto en el reloj (A− / A+): escala todo sin necesidad de zoom con los dedos
+  let wk = Math.max(.7, Math.min(1.8, +store.get('rx_wk', '1') || 1));
+  const applyWk = () => { document.documentElement.style.setProperty('--wk', wk); $('#wkVal').textContent = Math.round(wk * 100) + '%'; };
+  $('#wkMinus').onclick = () => { wk = Math.max(.7, +(wk - .1).toFixed(2)); store.set('rx_wk', wk); applyWk(); };
+  $('#wkPlus').onclick = () => { wk = Math.min(1.8, +(wk + .1).toFixed(2)); store.set('rx_wk', wk); applyWk(); };
+  applyWk();
+  $('#wMenuBtn').addEventListener('pointerdown', (e) => e.stopPropagation()); $('#wMenuBtn').addEventListener('pointerup', (e) => e.stopPropagation());
+  $('#wMenuBtn').onclick = () => wgo('menu');
+  $('#wback').onclick = () => window.__onBack();
+  $('#wmenu').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-wgo]'); if (!b) return; const t = b.dataset.wgo;
+    if (t === 'round') { newRound(); wgo('home'); } else if (t === 'pair') startPairing(); else wgo(t);
+  });
+  // botón «atrás» del sistema / del reloj: cierra lo que esté abierto; devuelve false si no hay nada (entonces la app pregunta para salir)
+  window.__onBack = () => {
+    if (!$('#dlg').hidden) { $('#dlgNo').click(); return true; }
+    if (!$('#pairSheet').hidden) { stopPairing(); return true; }
+    if (!$('#psheet').hidden) { closePerson(); return true; }
+    if (!$('#sheet').hidden) { closeEditor(); return true; }
+    if (!$('#bk').hidden) { closeBk(); return true; }
+    if (isWatch()) { if (wpage === 'menu') { wgo('home'); return true; } if (wpage !== 'home') { wgo('menu'); return true; } return false; }
+    if (tab !== 'home') { go('home'); return true; }
+    return false;
+  };
   { const q = new URL(location.href).searchParams.get('form'); if (['auto', 'phone', 'round', 'square'].includes(q)) store.set('rx_form', q); }
   $('#formSel').value = store.get('rx_form', 'auto'); $('#formSel').onchange = (e) => { store.set('rx_form', e.target.value); applyForm(); };
   addEventListener('resize', applyForm); addEventListener('orientationchange', applyForm);
   // toque = alternar vista; pulsación larga = ronda nueva; deslizar = gestos de respaldo
   { const wv = $('#wv'); let t0 = 0, x0 = 0, y0 = 0, lp = null;
-    wv.addEventListener('pointerdown', (e) => { t0 = Date.now(); x0 = e.clientX; y0 = e.clientY; clearTimeout(lp); lp = setTimeout(() => { lp = null; newRound(); }, 900); });
-    wv.addEventListener('pointerup', (e) => { const moved = Math.hypot(e.clientX - x0, e.clientY - y0); clearTimeout(lp); if (lp === null && Date.now() - t0 >= 900) return; if (moved < 12 && Date.now() - t0 < 600) { const n = [...board.values()].length; if (n > 1 || wmode !== 'auto') { const cm = wmode === 'auto' ? (n === 1 ? 'hero' : 'list') : wmode; wmode = cm === 'hero' ? 'list' : 'hero'; drawWatch(); buzz(10); } } });
+    wv.addEventListener('pointerdown', (e) => { t0 = Date.now(); x0 = e.clientX; y0 = e.clientY; clearTimeout(lp); lp = setTimeout(() => { lp = null; if (wpage === 'home') wgo('menu'); }, 650); });
+    wv.addEventListener('pointerup', (e) => { const moved = Math.hypot(e.clientX - x0, e.clientY - y0); clearTimeout(lp); if (lp === null && Date.now() - t0 >= 650) return; if (moved < 12 && Date.now() - t0 < 600) { const n = [...board.values()].length; if (n > 1 || wmode !== 'auto') { const cm = wmode === 'auto' ? (n === 1 ? 'hero' : 'list') : wmode; wmode = cm === 'hero' ? 'list' : 'hero'; drawWatch(); buzz(10); } } });
     wv.addEventListener('pointercancel', () => clearTimeout(lp)); swipe(wv, (x) => dir(x, 'pantalla')); }
 
   // ---------- inicio ----------
@@ -467,12 +560,14 @@
     const wk = $('#wKey').value.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
     if (wk && wk.length >= 4 && wk !== key) { store.set('rx_key', wk); store.set('rx_seats', '{}'); store.set('rx_names', '{}'); location.reload(); return; }
     $('#welcome').remove(); $('#app').removeAttribute('aria-hidden');
-    apply(); connect(); go(t || 'home');          // primero arranca todo; lo opcional después y sin esperar
+    apply(); connect(); go(t || 'home'); if (isWatch()) wgo('home');          // primero arranca todo; lo opcional después y sin esperar
     try { if ('wakeLock' in navigator) { navigator.wakeLock.request('screen').catch(() => {}); document.addEventListener('visibilitychange', () => { if (!document.hidden) navigator.wakeLock.request('screen').catch(() => {}); }); } } catch {}
     try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch {}
   }
   $('#start').onclick = () => begin('home'); $('#startHelp').onclick = () => begin('help');
   applyForm();
+  if (isWatch() && !hadKey) $('#wPair').classList.add('primary');
+  drawCfg(); drawConn();
   $('#keyIn').value = key;
   $('#keyIn').addEventListener('change', (e) => {
     const v = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
